@@ -159,7 +159,7 @@ def run_multiple_segment_pmap(
     A sequence of tuples of results, of the type that carfac.run_segment.
   """
   pmapped = jax.pmap(
-      fun=carfac_jax.run_segment_jit,
+      carfac_jax.run_segment_jit,
       in_axes=(0, None, None, None, None),
       static_broadcasted_argnums=[1, 4],
   )
