@@ -1907,13 +1907,9 @@ def run_segment(
   # A 2022 addition to make open-loop running behave:
   if open_loop:
     # zero the deltas:
-    for ear in range(n_ears):
-      state.ears[ear].car.dzb_memory = jnp.zeros(
-          state.ears[ear].car.dzb_memory.shape
-      )
-      state.ears[ear].car.dg_memory = jnp.zeros(
-          state.ears[ear].car.dg_memory.shape
-      )
+    for ear_state in state.ears:
+      ear_state.car.dzb_memory = jnp.zeros(ear_state.car.dzb_memory.shape)
+      ear_state.car.dg_memory = jnp.zeros(ear_state.car.dg_memory.shape)
 
   # Note that we can use naive for loops here because it will make gradient
   # computation very slow.
