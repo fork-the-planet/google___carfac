@@ -1375,52 +1375,45 @@ def ear_ch_scan(
 
 def car_step(
     x_in: jax.Array,
-    ear: int,
-    hypers: CarfacHypers,
-    weights: CarfacWeights,
+    car_hypers: CarHypers,
+    car_weights: CarWeights,
     car_state: CarState,
 ):
   """The step function of the cascaded filters."""
-  ear_coeffs = hypers.ears[ear]
-  ear_weights = weights.ears[ear]
-  car_weights = ear_weights.car
-
   g = car_state.g_memory + car_state.dg_memory  # interp g
   zb = car_state.zb_memory + car_state.dzb_memory  # AGC interpolation car_state
   # update the nonlinear function of "velocity", and za (delay of z2):
   za = car_state.za_memory
   v = car_state.z2_memory - za
-  if ear_coeffs.car.linear_car:
+  if car_hypers.linear_car:
     nlf = 1  # To allow testing
   else:
     nlf = ohc_nlf(v, car_weights)
-  r = (
-      hypers.ears[ear].car.r1_coeffs + zb * nlf
-  )  #  zb * nfl is "undamping" delta r.
+  r = car_hypers.r1_coeffs + zb * nlf  #  zb * nfl is "undamping" delta r.
   za = car_state.z2_memory
 
   #  now reduce car_state by r and rotate with the fixed cos/sin coeffs:
   z1 = r * (
-      hypers.ears[ear].car.a0_coeffs * car_state.z1_memory
-      - hypers.ears[ear].car.c0_coeffs * car_state.z2_memory
+      car_hypers.a0_coeffs * car_state.z1_memory
+      - car_hypers.c0_coeffs * car_state.z2_memory
   )
   #  z1 = z1 + inputs
   z2 = r * (
-      hypers.ears[ear].car.c0_coeffs * car_state.z1_memory
-      + hypers.ears[ear].car.a0_coeffs * car_state.z2_memory
+      car_hypers.c0_coeffs * car_state.z1_memory
+      + car_hypers.a0_coeffs * car_state.z2_memory
   )
 
-  if ear_coeffs.car.use_delay_buffer:
+  if car_hypers.use_delay_buffer:
     # Optional fully-parallel update uses a delay per stage.
     zy = car_state.zy_memory
     # Propagate delayed last outputs zy and fill in new input.
     zy = jnp.insert(zy[0:-1], 0, x_in)
     z1 = z1 + zy  # add new stage inputs to z1 states
-    zy = g * (hypers.ears[ear].car.h_coeffs * z2 + zy)  # Outputs from z2
+    zy = g * (car_hypers.h_coeffs * z2 + zy)  # Outputs from z2
   else:
     # Ripple input-output path to avoid delay...
     # this is the only part that doesn't get computed "in parallel":
-    zy = hypers.ears[ear].car.h_coeffs * z2  # partial output
+    zy = car_hypers.h_coeffs * z2  # partial output
     _, zy = jax.lax.scan(ear_ch_scan, x_in, (g, zy))
     z1 += jnp.hstack((x_in, zy[:-1]))
 
@@ -1441,13 +1434,10 @@ def car_step(
 
 def syn_step(
     v_recep: jnp.ndarray,
-    ear: int,
-    weights: CarfacWeights,
+    syn_weights: SynWeights,
     syn_state: SynState,
 ) -> Tuple[jnp.ndarray, jnp.ndarray, SynState]:
   """Step the inner-hair cell model with ont input sample."""
-  syn_weights = weights.ears[ear].syn
-
   # Drive multiple synapse classes with receptor potential from IHC,
   # returning instantaneous spike rates per class, for a group of neurons
   # associated with the CF channel, including reductions due to synaptopathy.
@@ -1489,9 +1479,8 @@ def syn_step(
 
 def ihc_step(
     bm_out: jnp.ndarray,
-    ear: int,
-    hypers: CarfacHypers,
-    weights: CarfacWeights,
+    ihc_hypers: IhcHypers,
+    ihc_weights: IhcWeights,
     ihc_state: IhcState,
 ) -> Tuple[jnp.ndarray, jnp.ndarray, IhcState]:
   """Step the inner-hair cell model with ont input sample.
@@ -1501,9 +1490,8 @@ def ihc_step(
 
   Args:
     bm_out: The output from the CAR filterbank
-    ear: the index of the ear.
-    hypers: all the static coefficients.
-    weights: all the trainable weights.
+    ihc_hypers: all the static coefficients.
+    ihc_weights: all the trainable weights.
     ihc_state: The ihc state.
 
   Returns:
@@ -1511,9 +1499,7 @@ def ihc_step(
     the receptor potential output and the new state.
   """
 
-  ihc_weights = weights.ears[ear].ihc
-  ihc_hypers = hypers.ears[ear].ihc
-  v_recep = jnp.zeros(hypers.ears[ear].car.n_ch)
+  v_recep = jnp.zeros(ihc_hypers.n_ch)
   if ihc_hypers.ihc_style == 0:
     ihc_out = jnp.minimum(2, jnp.maximum(0, bm_out))
     #  limit it for stability
@@ -1569,9 +1555,8 @@ def ihc_step(
 def _agc_step_jit_helper(
     depth: int,
     n_agc_stages: int,
-    ear: int,
-    hypers: CarfacHypers,
-    weights: CarfacWeights,
+    agc_hypers: List[AgcHypers],
+    agc_weights: List[AgcWeights],
     agc_in: jax.Array,
     state: List[AgcState],
 ) -> List[AgcState]:
@@ -1581,17 +1566,14 @@ def _agc_step_jit_helper(
     depth: how many smoothing stages do we need to compute.
     n_agc_stages: total number of stages. It equals to coeffs[0].n_agc_stages.
       We make it a standalone arg to make it static.
-    ear: the index of the ear.
-    hypers: the details of the AGC design.
-    weights: all the trainable weights.
+    agc_hypers: the details of the AGC design.
+    agc_weights: all the trainable weights.
     agc_in: the input data for this stage, a vector of channel values
     state: the state of each channel's AGC.
 
   Returns:
     A list of updated AgcState objects.
   """
-  agc_hypers = hypers.ears[ear].agc
-
   # [1st loop]: update `input_accum`. This needs to be from stage 1 to stage 4.
 
   # Stage 0 always accumulates input. And its `agc_in` is the input argument.
@@ -1623,18 +1605,17 @@ def _agc_step_jit_helper(
     if stage < n_agc_stages - 1:
       agc_in = (
           agc_in
-          + weights.ears[ear].agc[stage].agc_stage_gain
-          * state[stage + 1].agc_memory
+          + agc_weights[stage].agc_stage_gain * state[stage + 1].agc_memory
       )
 
     agc_stage_state = state[stage].agc_memory
     # first-order recursive smoothing filter update, in time:
-    agc_stage_state = agc_stage_state + weights.ears[ear].agc[
-        stage
-    ].agc_epsilon * (agc_in - agc_stage_state)
+    agc_stage_state = agc_stage_state + agc_weights[stage].agc_epsilon * (
+        agc_in - agc_stage_state
+    )
     # spatial smooth:
     agc_stage_state = spatial_smooth_jit(
-        agc_hypers[stage], weights.ears[ear].agc[stage], agc_stage_state
+        agc_hypers[stage], agc_weights[stage], agc_stage_state
     )
     # and store the state back (in C++, do it all in place?)
     state[stage].agc_memory = agc_stage_state
@@ -1644,18 +1625,16 @@ def _agc_step_jit_helper(
 
 def agc_step(
     detects: jax.Array,
-    ear: int,
-    hypers: CarfacHypers,
-    weights: CarfacWeights,
+    agc_hypers: List[AgcHypers],
+    agc_weights: List[AgcWeights],
     state: List[AgcState],
 ) -> Tuple[bool, List[AgcState]]:
   """One time step of the AGC state update; decimates internally.
 
   Args:
     detects: The output of the IHC stage, input to AGC.
-    ear: the index of the ear.
-    hypers: all the coefficients.
-    weights: all the trainable weights.
+    agc_hypers: all the coefficients.
+    agc_weights: all the trainable weights.
     state: A list of AGC states.
 
   Returns:
@@ -1689,8 +1668,6 @@ def agc_step(
   # Version 2: Use "python loop + jnp logicals"
   depth = 0
   if_inc = True
-  agc_hypers = hypers.ears[ear].agc
-  agc_weights = weights.ears[ear].agc
   n_agc_stages = agc_hypers[0].n_agc_stages
   for stage in range(n_agc_stages):
     state[stage].decim_phase = jax.lax.cond(
@@ -1721,10 +1698,10 @@ def agc_step(
   agc_in = agc_weights[0].detect_scale * detects
 
   branch_fns = [
-      functools.partial(_agc_step_jit_helper, i, n_agc_stages, ear, hypers)
+      functools.partial(_agc_step_jit_helper, i, n_agc_stages, agc_hypers)
       for i in range(n_agc_stages + 1)
   ]
-  state = jax.lax.switch(depth, branch_fns, weights, agc_in, state)
+  state = jax.lax.switch(depth, branch_fns, agc_weights, agc_in, state)
 
   return updated, state
 
@@ -1948,20 +1925,24 @@ def run_segment(
     seg_agc = jnp.zeros((n_ch, n_ears))
     agc_updated = False
     for ear in range(n_ears):
-      # This would be cleaner if we could just get and use a reference to
-      # cfp.ears(ear), but Matlab doesn't work that way...
       car_out, state.ears[ear].car = car_step(
-          input_wave[ear], ear, hypers, weights, state.ears[ear].car
+          input_wave[ear],
+          hypers.ears[ear].car,
+          weights.ears[ear].car,
+          state.ears[ear].car,
       )
 
       # update IHC state & output on every time step, too
       ihc_out, v_recep, state.ears[ear].ihc = ihc_step(
-          car_out, ear, hypers, weights, state.ears[ear].ihc
+          car_out,
+          hypers.ears[ear].ihc,
+          weights.ears[ear].ihc,
+          state.ears[ear].ihc,
       )
 
       if hypers.ears[ear].syn.do_syn:
         ihc_out, firings, state.ears[ear].syn = syn_step(
-            v_recep, ear, weights, state.ears[ear].syn
+            v_recep, weights.ears[ear].syn, state.ears[ear].syn
         )
         naps_fibers = naps_fibers.at[:, :, ear].set(firings)
       else:
@@ -1971,7 +1952,10 @@ def run_segment(
 
       # run the AGC update step, decimating internally,
       agc_updated, state.ears[ear].agc = agc_step(
-          ihc_out, ear, hypers, weights, state.ears[ear].agc
+          ihc_out,
+          hypers.ears[ear].agc,
+          weights.ears[ear].agc,
+          state.ears[ear].agc,
       )
       # save some output data:
       naps = naps.at[:, ear].set(ihc_out)
