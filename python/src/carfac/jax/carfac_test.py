@@ -430,12 +430,11 @@ class CarfacJaxTest(parameterized.TestCase):
   ):
     """Tests whether `run_segment` produces the same results as np version."""
     # Inits JAX version
-    params_jax = carfac_jax.CarfacDesignParameters(
-        n_ears=n_ears, use_delay_buffer=delay_buffer
-    )
+    params_jax = carfac_jax.CarfacDesignParameters.with_n_ears(n_ears)
     for ear in range(n_ears):
       params_jax.ears[ear].ihc.ihc_style = ihc_style
       params_jax.ears[ear].car.linear_car = False
+      params_jax.ears[ear].car.use_delay_buffer = delay_buffer
     hypers_jax, weights_jax, state_jax = carfac_jax.design_and_init_carfac(
         params_jax
     )

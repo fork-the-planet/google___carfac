@@ -1059,22 +1059,17 @@ class CarfacDesignParameters:
       default_factory=lambda: [EarDesignParameters()]
   )
 
-  def __init__(self, fs=22050.0, n_ears=1, use_delay_buffer=False):
-    """Initialize the Design Parameters dataclass.
+  @classmethod
+  def with_n_ears(cls, n_ears: int, fs: Optional[float] = None):
+    """Initialize the Design Parameters dataclass with the number of given ears.
 
     Args:
-      fs: Samples per second.
       n_ears: Number of ears to design for.
-      use_delay_buffer: Whether to use the delay buffer implementation for the
-        car_step.
+      fs: Samples per second.
     """
-    self.fs = fs
-    self.ears = [
-        EarDesignParameters(
-            car=CarDesignParameters(use_delay_buffer=use_delay_buffer)
-        )
-        for _ in range(n_ears)
-    ]
+    fs = fs or cls.fs
+    ears = [EarDesignParameters() for _ in range(n_ears)]
+    return cls(fs=fs, ears=ears)
 
   @property
   def n_ears(self) -> int:

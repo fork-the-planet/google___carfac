@@ -66,7 +66,7 @@ class CarfacJaxFloat64Test(parameterized.TestCase):
 
     # Computes gradients by `jax.grad`.
     gfunc = jax.grad(loss, has_aux=True)
-    params_jax = carfac_jax.CarfacDesignParameters(n_ears=n_ears)
+    params_jax = carfac_jax.CarfacDesignParameters.with_n_ears(n_ears)
     for ear in range(n_ears):
       params_jax.ears[ear].ihc.ihc_style = ihc_style
       params_jax.ears[ear].car.linear_car = False
