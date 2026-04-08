@@ -79,7 +79,7 @@ import numpy as np
 # TPU/GPU?
 
 
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarDesignParameters:
   """All the parameters manually set to design the CAR filterbank.
@@ -104,49 +104,8 @@ class CarDesignParameters:
   linear_car: bool = False
   ac_corner_hz: float = 20  # AC couple at 20 Hz corner
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.velocity_scale,
-        self.v_offset,
-        self.min_zeta,
-        self.max_zeta,
-        self.first_pole_theta,
-        self.zero_ratio,
-        self.high_f_damping_compression,
-        self.erb_per_step,
-        self.min_pole_hz,
-        self.erb_break_freq,
-        self.erb_q,
-        self.use_delay_buffer,
-        self.linear_car,
-        self.ac_corner_hz,
-    )
-    aux_data = (
-        'velocity_scale',
-        'v_offset',
-        'min_zeta',
-        'max_zeta',
-        'first_pole_theta',
-        'zero_ratio',
-        'high_f_damping_compression',
-        'erb_per_step',
-        'min_pole_hz',
-        'erb_break_freq',
-        'erb_q',
-        'use_delay_buffer',
-        'linear_car',
-        'ac_corner_hz',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarHypers:
   """The hyperparameters of CAR (tagged as `static` in `jax.jit`).
@@ -184,37 +143,6 @@ class CarHypers:
       default_factory=lambda: jnp.zeros(())
   )
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.n_ch,
-        self.use_delay_buffer,
-        self.linear_car,
-        self.r1_coeffs,
-        self.a0_coeffs,
-        self.c0_coeffs,
-        self.h_coeffs,
-        self.g0_coeffs,
-        self.zr_coeffs,
-    )
-    aux_data = (
-        'n_ch',
-        'use_delay_buffer',
-        'linear_car',
-        'r1_coeffs',
-        'a0_coeffs',
-        'c0_coeffs',
-        'h_coeffs',
-        'g0_coeffs',
-        'zr_coeffs',
-    )
-    return (children, aux_data)
-
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
   def _eq_key(self):
     return (
         self.n_ch,
@@ -238,7 +166,7 @@ class CarHypers:
     return self._eq_key() == other._eq_key()
 
 
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarWeights:
   """The trainable weights of the filters.
@@ -266,35 +194,8 @@ class CarWeights:
 
   ac_coeff: float = 0.0
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.velocity_scale,
-        self.v_offset,
-        self.ohc_health,
-        self.ga_coeffs,
-        self.gb_coeffs,
-        self.gc_coeffs,
-        self.ac_coeff,
-    )
-    aux_data = (
-        'velocity_scale',
-        'v_offset',
-        'ohc_health',
-        'ga_coeffs',
-        'gb_coeffs',
-        'gc_coeffs',
-        'ac_coeff',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarState:
   """All the state variables for the CAR filterbank."""
@@ -309,39 +210,8 @@ class CarState:
   dg_memory: jnp.ndarray
   ac_coupler: jnp.ndarray
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.z1_memory,
-        self.z2_memory,
-        self.za_memory,
-        self.zb_memory,
-        self.dzb_memory,
-        self.zy_memory,
-        self.g_memory,
-        self.dg_memory,
-        self.ac_coupler,
-    )
-    aux_data = (
-        'z1_memory',
-        'z2_memory',
-        'za_memory',
-        'zb_memory',
-        'dzb_memory',
-        'zy_memory',
-        'g_memory',
-        'dg_memory',
-        'ac_coupler',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class AgcDesignParameters:
   """All the parameters set manually to design the AGC filters."""
@@ -362,35 +232,8 @@ class AgcDesignParameters:
   )
   agc_mix_coeffs: float = 0.5
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.n_stages,
-        self.time_constants,
-        self.agc_stage_gain,
-        self.decimation,
-        self.agc1_scales,
-        self.agc2_scales,
-        self.agc_mix_coeffs,
-    )
-    aux_data = (
-        'n_stages',
-        'time_constants',
-        'agc_stage_gain',
-        'decimation',
-        'agc1_scales',
-        'agc2_scales',
-        'agc_mix_coeffs',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class AgcHypers:
   """The hyperparameters (tagged as `static` in `jax.jit`) of AGC step.
@@ -424,33 +267,6 @@ class AgcHypers:
       default_factory=lambda: jnp.array(64, dtype=int)
   )
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.n_ch,
-        self.n_agc_stages,
-        self.decimation,
-        self.agc_spatial_iterations,
-        self.agc_spatial_n_taps,
-        self.reverse_cumulative_decimation,
-        self.max_cumulative_decimation,
-    )
-    aux_data = (
-        'n_ch',
-        'n_agc_stages',
-        'decimation',
-        'agc_spatial_iterations',
-        'agc_spatial_n_taps',
-        'reverse_cumulative_decimation',
-        'max_cumulative_decimation',
-    )
-    return (children, aux_data)
-
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
   def _eq_key(self):
     # Notice that we use the `id` of `jnp.ndarray` rather than its content for
     # speed. This should always be correct because `jnp.ndarray` is immutable.
@@ -477,7 +293,7 @@ class AgcHypers:
     return self._eq_key() == other._eq_key()
 
 
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class AgcWeights:
   """Trainable weights of the AGC step."""
@@ -490,35 +306,8 @@ class AgcWeights:
   AGC_polez1: Union[float, jnp.ndarray] = 0.0  # pylint: disable=invalid-name
   AGC_polez2: Union[float, jnp.ndarray] = 0.0  # pylint: disable=invalid-name
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.agc_epsilon,
-        self.agc_stage_gain,
-        self.agc_spatial_fir,
-        self.detect_scale,
-        self.agc_mix_coeffs,
-        self.AGC_polez1,
-        self.AGC_polez2,
-    )
-    aux_data = (
-        'agc_epsilon',
-        'agc_stage_gain',
-        'agc_spatial_fir',
-        'detect_scale',
-        'agc_mix_coeffs',
-        'AGC_polez1',
-        'AGC_polez2',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class AgcState:
   """All the state variables for one stage of the AGC."""
@@ -527,19 +316,8 @@ class AgcState:
   agc_memory: jnp.ndarray
   input_accum: jnp.ndarray
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (self.decim_phase, self.agc_memory, self.input_accum)
-    aux_data = ('decim_phase', 'agc_memory', 'input_accum')
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class IhcDesignParameters:
   """Variables needed for the inner hair cell implementation."""
@@ -553,37 +331,8 @@ class IhcDesignParameters:
   tau2_out: float = 0.001  # depletion tau is pretty fast 1 ms
   tau2_in: float = 0.010  # recovery tau is slower 10ms
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.ihc_style,
-        self.tau_lpf,
-        self.tau_out,
-        self.tau_in,
-        self.tau1_out,
-        self.tau1_in,
-        self.tau2_out,
-        self.tau2_in,
-    )
-    aux_data = (
-        'ihc_style',
-        'tau_lpf',
-        'tau_out',
-        'tau_in',
-        'tau1_out',
-        'tau1_in',
-        'tau2_out',
-        'tau2_in',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class SynDesignParameters:
   """Variables needed for the synapse implementation.
@@ -649,39 +398,8 @@ class SynDesignParameters:
         healthy_n_fibers=healthy_n_fibers, agc_weights=agc_weights, **kwargs
     )
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.n_classes,
-        self.healthy_n_fibers,
-        self.spont_rates,
-        self.sat_rates,
-        self.sat_reservoir,
-        self.v_width,
-        self.tau_lpf,
-        self.reservoir_tau,
-        self.agc_weights,
-    )
-    aux_data = (
-        'n_classes',
-        'healthy_n_fibers',
-        'spont_rates',
-        'sat_rates',
-        'sat_reservoir',
-        'v_width',
-        'tau_lpf',
-        'reservoir_tau',
-        'agc_weights',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 # A hash is needed if this class is used as a static parameter in a `jax.jit`ted
 # function. However, we don't want to mark this class as frozen for convenience.
 @dataclasses.dataclass(unsafe_hash=True)
@@ -690,19 +408,8 @@ class SynHypers:
 
   do_syn: bool = False
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):
-    children = [self.do_syn]
-    aux_data = ('do_syn',)
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class SynWeights:
   """Trainable weights of the IHC synapse."""
@@ -719,44 +426,8 @@ class SynWeights:
   res_coeff: float
   lpf_coeff: float
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):
-    """Flatten tree for pytree."""
-    children = (
-        self.n_fibers,
-        self.v_widths,
-        self.v_halfs,
-        self.a1,
-        self.a2,
-        self.agc_weights,
-        self.spont_p,
-        self.spont_sub,
-        self.res_lpf_inits,
-        self.res_coeff,
-        self.lpf_coeff,
-    )
-    aux_data = (
-        'n_fibers',
-        'v_widths',
-        'v_halfs',
-        'a1',
-        'a2',
-        'agc_weights',
-        'spont_p',
-        'spont_sub',
-        'res_lpf_inits',
-        'res_coeff',
-        'lpf_coeff',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class SynState:
   """All the state variables for the IHC synapse."""
@@ -764,19 +435,8 @@ class SynState:
   reservoirs: jnp.ndarray
   lpf_state: jnp.ndarray
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):
-    children = (self.reservoirs, self.lpf_state)
-    aux_data = ('reservoirs', 'lpf_state')
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 # A hash is needed if this class is used as a static parameter in a `jax.jit`ted
 # function. However, we don't want to mark this class as frozen for convenience.
 @dataclasses.dataclass(unsafe_hash=True)
@@ -787,19 +447,8 @@ class IhcHypers:
   # 0 is just_hwr, 1 is one_cap, 2 is two_cap.
   ihc_style: int
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):
-    children = (self.n_ch, self.ihc_style)
-    aux_data = ('n_ch', 'ihc_style')
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class IhcWeights:
   """Trainable weights of the IHC step."""
@@ -818,47 +467,10 @@ class IhcWeights:
   out_rate: Union[float, jnp.ndarray] = 0.0
   in_rate: float = 0.0
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.lpf_coeff,
-        self.out1_rate,
-        self.in1_rate,
-        self.out2_rate,
-        self.in2_rate,
-        self.output_gain,
-        self.rest_output,
-        self.rest_cap2,
-        self.rest_cap1,
-        self.rest_cap,
-        self.out_rate,
-        self.in_rate,
-    )
-    aux_data = (
-        'lpf_coeff',
-        'out1_rate',
-        'in1_rate',
-        'out2_rate',
-        'in2_rate',
-        'output_gain',
-        'rest_output',
-        'rest_cap2',
-        'rest_cap1',
-        'rest_cap',
-        'out_rate',
-        'in_rate',
-    )
-    return (children, aux_data)
-
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
 
 # States can be donated so we must use default_factory to create a freshly new
 # one every time.
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class IhcState:
   """All the state variables for the inner-hair cell implementation."""
@@ -883,33 +495,8 @@ class IhcState:
       default_factory=lambda: jnp.array(0, dtype=float)
   )
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.ihc_accum,
-        self.cap_voltage,
-        self.lpf1_state,
-        self.lpf2_state,
-        self.cap1_voltage,
-        self.cap2_voltage,
-    )
-    aux_data = (
-        'ihc_accum',
-        'cap_voltage',
-        'lpf1_state',
-        'lpf2_state',
-        'cap1_voltage',
-        'cap2_voltage',
-    )
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class EarDesignParameters:
   """Parameters manually set to design Carfac for 1 ear."""
@@ -927,19 +514,8 @@ class EarDesignParameters:
       default_factory=SynDesignParameters
   )
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (self.car, self.agc, self.ihc)
-    aux_data = ('car', 'agc', 'ihc')
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class EarHypers:
   """Hyperparameters (tagged as static in `jax.jit`) of 1 ear."""
@@ -951,33 +527,6 @@ class EarHypers:
   agc: List[AgcHypers]  # One element per AGC layer.
   ihc: IhcHypers
   syn: SynHypers
-
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (
-        self.n_ch,
-        self.pole_freqs,
-        self.max_channels_per_octave,
-        self.car,
-        self.agc,
-        self.ihc,
-        self.syn,
-    )
-    aux_data = (
-        'n_ch',
-        'pole_freqs',
-        'max_channels_per_octave',
-        'car',
-        'agc',
-        'ihc',
-        'syn',
-    )
-    return (children, aux_data)
-
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
 
   def _eq_key(self):
     # Notice that we use the `id` of `jnp.ndarray` rather than its content for
@@ -1005,7 +554,7 @@ class EarHypers:
     return self._eq_key() == other._eq_key()
 
 
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class EarWeights:
   """Trainable weights of 1 ear."""
@@ -1015,19 +564,8 @@ class EarWeights:
   ihc: IhcWeights
   syn: SynWeights
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (self.car, self.agc, self.ihc, self.syn)
-    aux_data = ('car', 'agc', 'ihc', 'syn')
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class EarState:
   """The state of 1 ear."""
@@ -1037,19 +575,8 @@ class EarState:
   agc: List[AgcState]
   syn: SynState
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = (self.car, self.ihc, self.agc, self.syn)
-    aux_data = ('car', 'ihc', 'agc', 'syn')
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarfacDesignParameters:
   """All the parameters set manually for designing CARFAC."""
@@ -1075,35 +602,13 @@ class CarfacDesignParameters:
   def n_ears(self) -> int:
     return len(self.ears)
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):
-    children = (self.fs, self.ears)
-    aux_data = ('fs', 'ears')
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarfacHypers:
   """All the static variables (tagged as `static` in jax.jit)."""
 
   ears: List[EarHypers] = dataclasses.field(default_factory=list)
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = [self.ears]
-    aux_data = ['ears']
-    return (children, aux_data)
-
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
 
   def _eq_key(self):
     return tuple(self.ears)
@@ -1118,42 +623,20 @@ class CarfacHypers:
     return self._eq_key() == other._eq_key()
 
 
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarfacWeights:
   """All the trainable weights."""
 
   ears: List[EarWeights] = dataclasses.field(default_factory=list)
 
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):
-    children = [self.ears]  # pylint: disable=missing-function-docstring
-    aux_data = ['ears']
-    return (children, aux_data)
 
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
-
-
-@jax.tree_util.register_pytree_node_class
+@jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class CarfacState:
   """All the state variables."""
 
   ears: List[EarState] = dataclasses.field(default_factory=list)
-
-  # The following 2 functions are boiler code required by pytree.
-  # Reference: https://jax.readthedocs.io/en/latest/pytrees.html
-  def tree_flatten(self):  # pylint: disable=missing-function-docstring
-    children = [self.ears]
-    aux_data = ['ears']
-    return (children, aux_data)
-
-  @classmethod
-  def tree_unflatten(cls, _, children):
-    return cls(*children)
 
 
 #############################
