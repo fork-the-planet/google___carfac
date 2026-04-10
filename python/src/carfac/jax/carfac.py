@@ -1842,6 +1842,127 @@ def close_agc_loop(
   return state
 
 
+def run_sample(
+    open_loop: bool,
+    hypers: CarfacHypers,
+    weights: CarfacWeights,
+    state: CarfacState,
+    input_wave: jnp.ndarray,
+) -> Tuple[
+    CarfacState,
+    Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray],
+]:
+  """This function runs the entire CARFAC model with a single audio sample.
+
+  Intended to be used with `jax.lax.scan` after partially applying `hypers` and
+  `weights` using `functools.partial`. See `run_segment` for an example, and an
+  example of how to use this function.
+
+  Args:
+    open_loop: whether to run CARFAC without the feedback.
+    hypers: the coefficients of the CARFAC model.
+    weights: the trainable weights of the CARFAC model.
+    state: the *current* state of the CARFAC model.
+    input_wave: the audio sample as an (n_ears,) array.
+
+  Returns:
+    updated_state: the *updated* state of the CARFAC model.
+    output: a tuple of the following:
+      naps: a (n_ch, n_ears) array of the neural activity pattern.
+      naps_fibers: a (n_ch, n_fibertypes, n_ears) array of the neural activity
+        of the different fiber types.
+      bm: a (n_ch, n_ears) array of the basilar membrane motion.
+      seg_ohc: a (n_ch, n_ears) array, identical to
+        updated_state.ears[...].car.za_memory.
+      seg_agc: a (n_ch, n_ears) array, identical to
+        updated_state.ears[...].car.zb_memory.
+  """
+  n_ears = input_wave.shape[0]
+  n_fibertypes = SynDesignParameters.n_classes
+
+  # TODO(honglinyu): add more assertions using checkify.
+  # if n_ears != cfp.n_ears:
+  #   raise ValueError(
+  #       'Bad number of input_waves channels (%d vs %d) passed to Run' %
+  #       (n_ears, cfp.n_ears))
+
+  n_ch = hypers.ears[0].car.n_ch
+
+  naps = jnp.zeros((n_ch, n_ears))  # allocate space for result
+  naps_fibers = jnp.zeros((n_ch, n_fibertypes, n_ears))
+  bm = jnp.zeros((n_ch, n_ears))
+  seg_ohc = jnp.zeros((n_ch, n_ears))
+  seg_agc = jnp.zeros((n_ch, n_ears))
+  agc_updated = False
+  for ear in range(n_ears):
+    car_out, state.ears[ear].car = car_step(
+        input_wave[ear],
+        hypers.ears[ear].car,
+        weights.ears[ear].car,
+        state.ears[ear].car,
+    )
+
+    # update IHC state & output on every time step, too
+    ihc_out, v_recep, state.ears[ear].ihc = ihc_step(
+        car_out,
+        hypers.ears[ear].ihc,
+        weights.ears[ear].ihc,
+        state.ears[ear].ihc,
+    )
+
+    if hypers.ears[ear].syn.do_syn:
+      ihc_out, firings, state.ears[ear].syn = syn_step(
+          v_recep, weights.ears[ear].syn, state.ears[ear].syn
+      )
+      naps_fibers = naps_fibers.at[:, :, ear].set(firings)
+    else:
+      naps_fibers = naps_fibers.at[:, :, ear].set(
+          jnp.zeros([jnp.shape(ihc_out)[0], n_fibertypes])
+      )
+
+    # run the AGC update step, decimating internally,
+    agc_updated, state.ears[ear].agc = agc_step(
+        ihc_out,
+        hypers.ears[ear].agc,
+        weights.ears[ear].agc,
+        state.ears[ear].agc,
+    )
+    # save some output data:
+    naps = naps.at[:, ear].set(ihc_out)
+    bm = bm.at[:, ear].set(car_out)
+    car_state = state.ears[ear].car
+    seg_ohc = seg_ohc.at[:, ear].set(car_state.za_memory)
+    seg_agc = seg_agc.at[:, ear].set(car_state.zb_memory)
+
+  def close_agc_loop_helper(
+      hypers: CarfacHypers, weights: CarfacWeights, state: CarfacState
+  ) -> CarfacState:
+    """A helper function to do some checkings before calling the real one."""
+    # Handle multi-ears.
+    state = cross_couple(hypers, weights, state)
+    if not open_loop:
+      return close_agc_loop(hypers, weights, state)
+    else:
+      return state
+
+  state = jax.lax.cond(
+      agc_updated,
+      close_agc_loop_helper,
+      lambda c, w, s: s,  # If agc isn't updated, returns the original state.
+      hypers,
+      weights,
+      state,
+  )
+
+  return state, (
+      naps,
+      naps_fibers,
+      bm,
+      seg_ohc,
+      seg_agc,
+  )
+
+
 def run_segment(
     input_waves: jnp.ndarray,
     hypers: CarfacHypers,
@@ -1893,16 +2014,6 @@ def run_segment(
   """
   if len(input_waves.shape) < 2:
     input_waves = jnp.reshape(input_waves, (-1, 1))
-  n_ears = input_waves.shape[1]
-  n_fibertypes = SynDesignParameters.n_classes
-
-  # TODO(honglinyu): add more assertions using checkify.
-  # if n_ears != cfp.n_ears:
-  #   raise ValueError(
-  #       'Bad number of input_waves channels (%d vs %d) passed to Run' %
-  #       (n_ears, cfp.n_ears))
-
-  n_ch = hypers.ears[0].car.n_ch
 
   # A 2022 addition to make open-loop running behave:
   if open_loop:
@@ -1911,85 +2022,8 @@ def run_segment(
       ear_state.car.dzb_memory = jnp.zeros(ear_state.car.dzb_memory.shape)
       ear_state.car.dg_memory = jnp.zeros(ear_state.car.dg_memory.shape)
 
-  # Note that we can use naive for loops here because it will make gradient
-  # computation very slow.
-  def run_segment_scan_helper(state, input_wave):
-    naps = jnp.zeros((n_ch, n_ears))  # allocate space for result
-    naps_fibers = jnp.zeros((n_ch, n_fibertypes, n_ears))
-    bm = jnp.zeros((n_ch, n_ears))
-    seg_ohc = jnp.zeros((n_ch, n_ears))
-    seg_agc = jnp.zeros((n_ch, n_ears))
-    agc_updated = False
-    for ear in range(n_ears):
-      car_out, state.ears[ear].car = car_step(
-          input_wave[ear],
-          hypers.ears[ear].car,
-          weights.ears[ear].car,
-          state.ears[ear].car,
-      )
-
-      # update IHC state & output on every time step, too
-      ihc_out, v_recep, state.ears[ear].ihc = ihc_step(
-          car_out,
-          hypers.ears[ear].ihc,
-          weights.ears[ear].ihc,
-          state.ears[ear].ihc,
-      )
-
-      if hypers.ears[ear].syn.do_syn:
-        ihc_out, firings, state.ears[ear].syn = syn_step(
-            v_recep, weights.ears[ear].syn, state.ears[ear].syn
-        )
-        naps_fibers = naps_fibers.at[:, :, ear].set(firings)
-      else:
-        naps_fibers = naps_fibers.at[:, :, ear].set(
-            jnp.zeros([jnp.shape(ihc_out)[0], n_fibertypes])
-        )
-
-      # run the AGC update step, decimating internally,
-      agc_updated, state.ears[ear].agc = agc_step(
-          ihc_out,
-          hypers.ears[ear].agc,
-          weights.ears[ear].agc,
-          state.ears[ear].agc,
-      )
-      # save some output data:
-      naps = naps.at[:, ear].set(ihc_out)
-      bm = bm.at[:, ear].set(car_out)
-      car_state = state.ears[ear].car
-      seg_ohc = seg_ohc.at[:, ear].set(car_state.za_memory)
-      seg_agc = seg_agc.at[:, ear].set(car_state.zb_memory)
-
-    def close_agc_loop_helper(
-        hypers: CarfacHypers, weights: CarfacWeights, state: CarfacState
-    ) -> CarfacState:
-      """A helper function to do some checkings before calling the real one."""
-      # Handle multi-ears.
-      state = cross_couple(hypers, weights, state)
-      if not open_loop:
-        return close_agc_loop(hypers, weights, state)
-      else:
-        return state
-
-    state = jax.lax.cond(
-        agc_updated,
-        close_agc_loop_helper,
-        lambda c, w, s: s,  # If agc isn't updated, returns the original state.
-        hypers,
-        weights,
-        state,
-    )
-
-    return state, (
-        naps,
-        naps_fibers,
-        bm,
-        seg_ohc,
-        seg_agc,
-    )
-
   state, (naps, naps_fibers, bm, seg_ohc, seg_agc) = jax.lax.scan(
-      run_segment_scan_helper,
+      functools.partial(run_sample, open_loop, hypers, weights),
       state,
       input_waves,
   )
