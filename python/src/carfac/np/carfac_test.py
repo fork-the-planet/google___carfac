@@ -1,5 +1,3 @@
-"""Tests for carfac."""
-
 import math
 from typing import List, Tuple
 
@@ -1055,6 +1053,15 @@ class CarfacTest(parameterized.TestCase):
     self.assertTrue(np.all(tf_ratio >= 1))
     self.assertTrue(np.all(tf_ratio <= 1.25))
 
+  @parameterized.named_parameters(
+      ('default', 0.0, 71),
+      ('more_channels', 2.0, 75),
+  )
+  def test_high_f_factor(self, high_f_factor, expected_n_ch):
+    params = carfac.CarParams()
+    params.high_f_factor = high_f_factor
+    cfp = carfac.design_carfac(car_params=params)
+    self.assertEqual(cfp.ears[0].car_coeffs.n_ch, expected_n_ch)
 
 if __name__ == '__main__':
   absltest.main()

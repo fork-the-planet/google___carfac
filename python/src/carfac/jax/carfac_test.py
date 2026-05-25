@@ -590,6 +590,15 @@ class CarfacJaxTest(parameterized.TestCase):
             state_np.ears[ear].agc_state[stage].decim_phase,
         )
 
+  @parameterized.named_parameters(
+      ('default', 0.0, 71),
+      ('more_channels', 2.0, 75),
+  )
+  def test_high_f_factor(self, high_f_factor, expected_n_ch):
+    params = carfac_jax.CarfacDesignParameters()
+    params.ears[0].car.high_f_factor = high_f_factor
+    h, _, _ = carfac_jax.design_and_init_carfac(params)
+    self.assertEqual(h.ears[0].n_ch, expected_n_ch)
 
 if __name__ == '__main__':
   absltest.main()

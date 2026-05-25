@@ -63,6 +63,8 @@ class CarParams:
   erb_break_freq: float = 165.3  # Greenwood map's break freq.
   erb_q: float = 1000 / (24.7 * 4.37)  # Glasberg and Moore's high-cf ratio
   ac_corner_hz: float = 20  # AC couple at 20 Hz corner
+  high_f_factor: float = 0.0  # Factor to include more high frequency channels
+  # at <100kHz sampling rate (0 gives original CARFAC channel arrangement).
 
 
 @dataclasses.dataclass
@@ -1327,7 +1329,9 @@ def design_carfac(
   n_ch = 0
   while pole_hz > car_params.min_pole_hz:
     n_ch = n_ch + 1
-    pole_hz = pole_hz - car_params.erb_per_step * hz_to_erb(
+    # Factor that increases channel density at high frequencies.
+    high_f_chan = 1.0 - car_params.high_f_factor * (pole_hz / fs) ** 2
+    pole_hz = pole_hz - high_f_chan * car_params.erb_per_step * hz_to_erb(
         pole_hz, car_params.erb_break_freq, car_params.erb_q
     )
 
@@ -1337,7 +1341,9 @@ def design_carfac(
   pole_hz = car_params.first_pole_theta * fs / (2 * math.pi)
   for ch in range(n_ch):
     pole_freqs[ch] = pole_hz
-    pole_hz = pole_hz - car_params.erb_per_step * hz_to_erb(
+    # Factor that increases channel density at high frequencies.
+    high_f_chan = 1.0 - car_params.high_f_factor * (pole_hz / fs) ** 2
+    pole_hz = pole_hz - high_f_chan * car_params.erb_per_step * hz_to_erb(
         pole_hz, car_params.erb_break_freq, car_params.erb_q
     )
   # Now we have n_ch, the number of channels, and pole_freqs array.

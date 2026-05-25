@@ -103,6 +103,8 @@ class CarDesignParameters:
   use_delay_buffer: bool = False
   linear_car: bool = False
   ac_corner_hz: float = 20  # AC couple at 20 Hz corner
+  high_f_factor: float = 0.0  # Factor to include more high frequency channels
+  # at <100kHz sampling rate (0 gives original CARFAC channel arrangement).
 
 
 @jax.tree_util.register_dataclass
@@ -1246,7 +1248,11 @@ def design_and_init_carfac(
     n_ch = 0
     while pole_hz > ear_params.car.min_pole_hz:
       n_ch = n_ch + 1
-      pole_hz = pole_hz - ear_params.car.erb_per_step * hz_to_erb(
+      # Factor that increases channel density at high frequencies.
+      high_f_chan = (
+          1.0 - ear_params.car.high_f_factor * (pole_hz / params.fs) ** 2
+      )
+      pole_hz = pole_hz - high_f_chan * ear_params.car.erb_per_step * hz_to_erb(
           pole_hz, ear_params.car.erb_break_freq, ear_params.car.erb_q
       )
 
@@ -1259,7 +1265,11 @@ def design_and_init_carfac(
         pole_freqs = pole_freqs.at[ch].set(pole_hz)
       else:
         pole_freqs[ch] = pole_hz
-      pole_hz = pole_hz - ear_params.car.erb_per_step * hz_to_erb(
+      # Factor that increases channel density at high frequencies.
+      high_f_chan = (
+          1.0 - ear_params.car.high_f_factor * (pole_hz / params.fs) ** 2
+      )
+      pole_hz = pole_hz - high_f_chan * ear_params.car.erb_per_step * hz_to_erb(
           pole_hz, ear_params.car.erb_break_freq, ear_params.car.erb_q
       )
     # Now we have n_ch, the number of channels, and pole_freqs array.
