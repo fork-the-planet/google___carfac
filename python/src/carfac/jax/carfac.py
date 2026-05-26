@@ -13,7 +13,7 @@ import dataclasses
 import functools
 import math
 import numbers
-from typing import ClassVar, List, Optional, Tuple, Union
+from typing import ClassVar, List, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -73,7 +73,7 @@ import numpy as np
 # Because operations of `jax.numpy.ndarray` like `max/min`, `[]` will generate
 # `jax.numpy.ndarray` of size 1 rather than numeric types like `float` or `int`,
 # for convenience, we annotate some parameters as a union of numeric type and
-# `jax.numpy.ndarray`. For example `Union[float, jnp.ndarray]`.
+# `jax.numpy.ndarray`. For example `float | jnp.ndarray`.
 # TODO(honglinyu): should we avoid the unions and only annotate `jnp.ndarray`?
 # Specifically, as pointed by @malcolmslaney, will this matter when we run it on
 # TPU/GPU?
@@ -302,11 +302,11 @@ class AgcWeights:
 
   agc_epsilon: float = 0.0
   agc_stage_gain: float = 0.0
-  agc_spatial_fir: Optional[List[Union[float, jnp.ndarray]]] = None
+  agc_spatial_fir: List[float | jnp.ndarray] | None = None
   detect_scale: float = 1.0
-  agc_mix_coeffs: Union[float, jnp.ndarray] = 0.0
-  AGC_polez1: Union[float, jnp.ndarray] = 0.0  # pylint: disable=invalid-name
-  AGC_polez2: Union[float, jnp.ndarray] = 0.0  # pylint: disable=invalid-name
+  agc_mix_coeffs: float | jnp.ndarray = 0.0
+  AGC_polez1: float | jnp.ndarray = 0.0  # pylint: disable=invalid-name
+  AGC_polez2: float | jnp.ndarray = 0.0  # pylint: disable=invalid-name
 
 
 @jax.tree_util.register_dataclass
@@ -419,14 +419,14 @@ class SynWeights:
   n_fibers: jnp.ndarray
   v_widths: jnp.ndarray
   v_halfs: jnp.ndarray  # Same units as v_recep and v_widths.
-  a1: float  # Feedback gain
-  a2: float  # Output gain
+  a1: float | jnp.ndarray  # Feedback gain
+  a2: float | jnp.ndarray  # Output gain
   agc_weights: jnp.ndarray  # For making a nap out to agc in.
   spont_p: jnp.ndarray  # Used only to init the output LPF
   spont_sub: jnp.ndarray
   res_lpf_inits: jnp.ndarray
-  res_coeff: float
-  lpf_coeff: float
+  res_coeff: float | jnp.ndarray
+  lpf_coeff: float | jnp.ndarray
 
 
 @jax.tree_util.register_dataclass
@@ -456,17 +456,17 @@ class IhcWeights:
   """Trainable weights of the IHC step."""
 
   lpf_coeff: float = 0.0
-  out1_rate: Union[float, jnp.ndarray] = 0.0
+  out1_rate: float | jnp.ndarray = 0.0
   in1_rate: float = 0.0
-  out2_rate: Union[float, jnp.ndarray] = 0.0
-  in2_rate: Union[float, jnp.ndarray] = 0.0
-  output_gain: Union[float, jnp.ndarray] = 0.0
-  rest_output: Union[float, jnp.ndarray] = 0.0
-  rest_cap2: Union[float, jnp.ndarray] = 0.0
-  rest_cap1: Union[float, jnp.ndarray] = 0.0
+  out2_rate: float | jnp.ndarray = 0.0
+  in2_rate: float | jnp.ndarray = 0.0
+  output_gain: float | jnp.ndarray = 0.0
+  rest_output: float | jnp.ndarray = 0.0
+  rest_cap2: float | jnp.ndarray = 0.0
+  rest_cap1: float | jnp.ndarray = 0.0
 
-  rest_cap: Union[float, jnp.ndarray] = 0.0
-  out_rate: Union[float, jnp.ndarray] = 0.0
+  rest_cap: float | jnp.ndarray = 0.0
+  out_rate: float | jnp.ndarray = 0.0
   in_rate: float = 0.0
 
 
@@ -654,7 +654,7 @@ class CarfacState:
 
 
 def hz_to_erb(
-    cf_hz: Union[float, jnp.ndarray],
+    cf_hz: float | jnp.ndarray,
     erb_break_freq: float = 1000 / 4.37,
     erb_q: float = 1000 / (24.7 * 4.37),
 ):
@@ -818,7 +818,7 @@ def design_stage_g(
   return g
 
 
-def ihc_detect(x: Union[float, jnp.ndarray]) -> Union[float, jnp.ndarray]:
+def ihc_detect(x: float | jnp.ndarray) -> float | jnp.ndarray:
   """An IHC-like sigmoidal detection nonlinearity for the CARFAC.
 
   Resulting conductance is in about [0...1.3405]
@@ -1321,7 +1321,7 @@ def design_and_init_carfac(
 
 
 def stage_g(
-    car_weights: CarWeights, undamping: Union[float, jnp.ndarray]
+    car_weights: CarWeights, undamping: float | jnp.ndarray
 ) -> jnp.ndarray:
   """Return the stage gain g needed to get unity gain at DC, using a quadratic approximation.
 
@@ -1609,8 +1609,8 @@ def _agc_step_jit_helper(
   # [2nd loop]: compute `agc_memory`. This needs to be from stage 4 to stage 1.
   for stage in reversed(range(depth)):
     agc_in = state[stage].input_accum / agc_hypers[stage].decimation
-    state[stage].input_accum = jnp.zeros(
-        state[stage].input_accum.shape
+    state[stage].input_accum = jnp.zeros_like(
+        state[stage].input_accum
     )  # reset accumulator
     if stage < n_agc_stages - 1:
       agc_in = (
@@ -2029,8 +2029,8 @@ def run_segment(
   if open_loop:
     # zero the deltas:
     for ear_state in state.ears:
-      ear_state.car.dzb_memory = jnp.zeros(ear_state.car.dzb_memory.shape)
-      ear_state.car.dg_memory = jnp.zeros(ear_state.car.dg_memory.shape)
+      ear_state.car.dzb_memory = jnp.zeros_like(ear_state.car.dzb_memory)
+      ear_state.car.dg_memory = jnp.zeros_like(ear_state.car.dg_memory)
 
   state, (naps, naps_fibers, bm, seg_ohc, seg_agc) = jax.lax.scan(
       functools.partial(run_sample, open_loop, hypers, weights),

@@ -600,5 +600,97 @@ class CarfacJaxTest(parameterized.TestCase):
     h, _, _ = carfac_jax.design_and_init_carfac(params)
     self.assertEqual(h.ears[0].n_ch, expected_n_ch)
 
+
+class CarfacStrictPromotionTest(parameterized.TestCase):
+  """Tests that CARFAC works under strict dtype promotion."""
+
+  @parameterized.parameters(
+      'just_hwr', 'one_cap', 'two_cap', 'two_cap_with_syn'
+  )
+  @jax.numpy_dtype_promotion('strict')
+  def test_design_and_init(self, ihc_style):
+    """Design and init should succeed under strict promotion."""
+    params = carfac_jax.CarfacDesignParameters()
+    params.ears[0].ihc.ihc_style = ihc_style
+    params.ears[0].car.linear_car = False
+    hypers, _, _ = carfac_jax.design_and_init_carfac(params)
+    # Verify the model was created with the expected number of channels.
+    self.assertGreater(hypers.ears[0].n_ch, 0)
+
+  @parameterized.parameters(
+      'just_hwr', 'one_cap', 'two_cap', 'two_cap_with_syn'
+  )
+  @jax.numpy_dtype_promotion('strict')
+  def test_run_segment(self, ihc_style):
+    """run_segment should succeed under strict promotion."""
+    params = carfac_jax.CarfacDesignParameters()
+    params.ears[0].ihc.ihc_style = ihc_style
+    params.ears[0].car.linear_car = False
+    hypers, weights, state = carfac_jax.design_and_init_carfac(params)
+
+    n_samp = 100
+    input_waves = jax.random.normal(jax.random.PRNGKey(0), (n_samp, 1))
+    naps, _, state, bm, _, _ = carfac_jax.run_segment(
+        input_waves, hypers, weights, state, open_loop=False
+    )
+    # Basic sanity: output shapes should match expectations.
+    n_ch = hypers.ears[0].n_ch
+    self.assertEqual(naps.shape, (n_samp, n_ch, 1))
+    self.assertEqual(bm.shape, (n_samp, n_ch, 1))
+    # Verify outputs are finite.
+    self.assertTrue(jnp.all(jnp.isfinite(naps)))
+
+  @parameterized.parameters(
+      'just_hwr', 'one_cap', 'two_cap', 'two_cap_with_syn'
+  )
+  @jax.numpy_dtype_promotion('strict')
+  def test_run_segment_jit(self, ihc_style):
+    """JIT-compiled run_segment should succeed under strict promotion."""
+    params = carfac_jax.CarfacDesignParameters()
+    params.ears[0].ihc.ihc_style = ihc_style
+    params.ears[0].car.linear_car = False
+    hypers, weights, state = carfac_jax.design_and_init_carfac(params)
+
+    n_samp = 100
+    input_waves = jax.random.normal(jax.random.PRNGKey(0), (n_samp, 1))
+    jitted_run_segment = jax.jit(
+        carfac_jax.run_segment, static_argnames=('hypers', 'open_loop')
+    )
+    naps, _, state, _, _, _ = jitted_run_segment(
+        input_waves, hypers, weights, state, open_loop=False
+    )
+    n_ch = hypers.ears[0].n_ch
+    self.assertEqual(naps.shape, (n_samp, n_ch, 1))
+    self.assertTrue(jnp.all(jnp.isfinite(naps)))
+
+  @jax.numpy_dtype_promotion('strict')
+  def test_open_loop(self):
+    """open_loop=True should work under strict promotion."""
+    params = carfac_jax.CarfacDesignParameters()
+    hypers, weights, state = carfac_jax.design_and_init_carfac(params)
+
+    n_samp = 100
+    input_waves = jax.random.normal(jax.random.PRNGKey(0), (n_samp, 1))
+    naps, _, state, _, _, _ = carfac_jax.run_segment(
+        input_waves, hypers, weights, state, open_loop=True
+    )
+    self.assertTrue(jnp.all(jnp.isfinite(naps)))
+
+  @jax.numpy_dtype_promotion('strict')
+  def test_two_ears(self):
+    """Two-ear model should work under strict promotion."""
+    params = carfac_jax.CarfacDesignParameters.with_n_ears(2)
+    hypers, weights, state = carfac_jax.design_and_init_carfac(params)
+
+    n_samp = 100
+    input_waves = jax.random.normal(jax.random.PRNGKey(0), (n_samp, 2))
+    naps, _, state, _, _, _ = carfac_jax.run_segment(
+        input_waves, hypers, weights, state, open_loop=False
+    )
+    n_ch = hypers.ears[0].n_ch
+    self.assertEqual(naps.shape, (n_samp, n_ch, 2))
+    self.assertTrue(jnp.all(jnp.isfinite(naps)))
+
+
 if __name__ == '__main__':
   absltest.main()
