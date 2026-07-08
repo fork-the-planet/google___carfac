@@ -62,7 +62,7 @@ class CARFACGoldenDataTest(tf.test.TestCase):
     np.savez(output_file, data=output[:, :, :, :, 0])
     print(f'Golden data test saved produced output in {output_file}')
 
-    golden = np.load(_TF_DIR / 'golden_data.npz')['data']
+    golden = np.load(_TF_DIR / 'golden_data.npz')['data']  # pyrefly: ignore[bad-argument-type]
     np.testing.assert_allclose(golden, output[:, :, :, :, 0], atol=6e-5)
 
 

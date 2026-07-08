@@ -60,7 +60,7 @@ class CARFACTest(tf.test.TestCase):
         if previous_values is None:
           previous_values = output
         else:
-          np.testing.assert_allclose(previous_values, output)
+          np.testing.assert_allclose(previous_values, output)  # pyrefly: ignore[no-matching-overload]
 
   def testRecurrenceExpanders(self):
     # Verifies that all recurrence expanders produce the same values.
@@ -79,7 +79,7 @@ class CARFACTest(tf.test.TestCase):
       if previous_value is None:
         previous_value = output
       else:
-        np.testing.assert_allclose(previous_value, output)
+        np.testing.assert_allclose(previous_value, output)  # pyrefly: ignore[no-matching-overload]
 
   def testMatchesMatlabWithAGCOff(self):
     carfac_testing.assert_matlab_compatibility(

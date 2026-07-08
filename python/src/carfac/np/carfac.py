@@ -222,7 +222,7 @@ def design_filters(
   # Maybe re-do this at Init time?
   undamping = car_coeffs.ohc_health
   # Avoid running this model function at Design time; see tests.
-  car_coeffs.g0_coeffs = design_stage_g(car_coeffs, undamping)
+  car_coeffs.g0_coeffs = design_stage_g(car_coeffs, undamping)  # pyrefly: ignore[bad-argument-type]
 
   return car_coeffs
 
@@ -573,11 +573,11 @@ def design_ihc(
         n_ch=n_ch,
         ihc_style=1,
         lpf_coeff=1 - math.exp(-1 / (ihc_params.tau_lpf * fs)),
-        out_rate=ro / (ihc_params.tau_out * fs),
+        out_rate=ro / (ihc_params.tau_out * fs),  # pyrefly: ignore[bad-argument-type]
         in_rate=1 / (ihc_params.tau_in * fs),
-        output_gain=1 / (saturation_output - current),
-        rest_output=current / (saturation_output - current),
-        rest_cap=cap_voltage,
+        output_gain=1 / (saturation_output - current),  # pyrefly: ignore[bad-argument-type]
+        rest_output=current / (saturation_output - current),  # pyrefly: ignore[bad-argument-type]
+        rest_cap=cap_voltage,  # pyrefly: ignore[bad-argument-type]
     )
   elif isinstance(ihc_params, IhcTwoCapParams):
     g1_max = ihc_detect(10)  # receptor conductance at high level
@@ -611,14 +611,14 @@ def design_ihc(
         n_ch=n_ch,
         ihc_style=2,
         lpf_coeff=1 - math.exp(-1 / (ihc_params.tau_lpf * fs)),
-        out1_rate=r1min / (ihc_params.tau1_out * fs),
+        out1_rate=r1min / (ihc_params.tau1_out * fs),  # pyrefly: ignore[bad-argument-type]
         in1_rate=1 / (ihc_params.tau1_in * fs),
-        out2_rate=r2min / (ihc_params.tau2_out * fs),
+        out2_rate=r2min / (ihc_params.tau2_out * fs),  # pyrefly: ignore[bad-argument-type]
         in2_rate=1 / (ihc_params.tau2_in * fs),
-        output_gain=1 / (saturation_current2 - rest_current2),
-        rest_output=rest_current2 / (saturation_current2 - rest_current2),
-        rest_cap2=cap2_voltage,
-        rest_cap1=cap1_voltage,
+        output_gain=1 / (saturation_current2 - rest_current2),  # pyrefly: ignore[bad-argument-type]
+        rest_output=rest_current2 / (saturation_current2 - rest_current2),  # pyrefly: ignore[bad-argument-type]
+        rest_cap2=cap2_voltage,  # pyrefly: ignore[bad-argument-type]
+        rest_cap1=cap1_voltage,  # pyrefly: ignore[bad-argument-type]
     )
   elif isinstance(ihc_params, IhcJustHwrParams):
     ihc_coeffs = IhcCoeffs(n_ch=n_ch, ihc_style=0)
@@ -861,7 +861,7 @@ def ihc_model_run(input_data: np.ndarray, fs: float) -> np.ndarray:
   for i in range(input_data.shape[0]):
     car_out = input_data[i]
     # does not work for SYN model.
-    ihc_out, ihc_state, _ = ihc_step(car_out, cfp.ears[0].ihc_coeffs, ihc_state)
+    ihc_out, ihc_state, _ = ihc_step(car_out, cfp.ears[0].ihc_coeffs, ihc_state)  # pyrefly: ignore[bad-argument-type]
     output[i] = ihc_out[0]
   return output
 
@@ -930,7 +930,7 @@ class AgcParams:
   agc1_scales: List[float] = dataclasses.field(
       default_factory=lambda: 1.0 * np.sqrt(2) ** np.arange(4)
   )  # 1 per channel
-  agc2_scales: List[float] = dataclasses.field(
+  agc2_scales: List[float] = dataclasses.field(  # pyrefly: ignore[bad-assignment]
       default_factory=lambda: 1.65 * math.sqrt(2) ** np.arange(4)
   )  # spread more toward base
   agc_mix_coeff: float = 0.5
@@ -1091,7 +1091,7 @@ def design_agc(agc_params: AgcParams, fs: float, n_ch: int) -> List[AgcCoeffs]:
 
     # When done, store the resulting FIR design in coeffs:
     agc_coeffs[stage].agc_spatial_iterations = n_iterations
-    agc_coeffs[stage].agc_spatial_fir = agc_spatial_fir
+    agc_coeffs[stage].agc_spatial_fir = agc_spatial_fir  # pyrefly: ignore[unbound-name]
     agc_coeffs[stage].agc_spatial_n_taps = n_taps
 
     # accumulate DC gains from all the stages, accounting for stage_gain:
@@ -1374,7 +1374,7 @@ def design_carfac(
       ihc_params,
       syn_params,
       n_ch,
-      pole_freqs,
+      pole_freqs,  # pyrefly: ignore[bad-argument-type]
       ears,
       n_ears,
   )
@@ -1400,7 +1400,7 @@ def carfac_init(cfp: CarfacParams) -> CarfacParams:
     cfp.ears[ear].ihc_state = ihc_init_state(cfp.ears[ear].ihc_coeffs)
     cfp.ears[ear].agc_state = agc_init_state(cfp.ears[ear].agc_coeffs)
     if cfp.syn_params:
-      cfp.ears[ear].syn_state = syn_init_state(cfp.ears[ear].syn_coeffs)
+      cfp.ears[ear].syn_state = syn_init_state(cfp.ears[ear].syn_coeffs)  # pyrefly: ignore[bad-argument-type]
   return cfp
 
 
@@ -1491,19 +1491,19 @@ def spatial_smooth(coeffs: AgcCoeffs, stage_state: np.ndarray) -> np.ndarray:
     if coeffs.agc_spatial_n_taps == 3:
       for _ in range(n_iterations):
         stage_state = (
-            fir_coeffs[0] * shift_right_one(stage_state)
-            + fir_coeffs[1] * stage_state
-            + fir_coeffs[2] * shift_left_one(stage_state)
+            fir_coeffs[0] * shift_right_one(stage_state)  # pyrefly: ignore[unsupported-operation]
+            + fir_coeffs[1] * stage_state  # pyrefly: ignore[unsupported-operation]
+            + fir_coeffs[2] * shift_left_one(stage_state)  # pyrefly: ignore[unsupported-operation]
         )
 
     #  5-tap smoother duplicates first and last coeffs
     elif coeffs.agc_spatial_n_taps == 5:
       for _ in range(n_iterations):
         stage_state = (
-            fir_coeffs[0]
+            fir_coeffs[0]  # pyrefly: ignore[unsupported-operation]
             * (shift_right_two(stage_state) + shift_right_one(stage_state))
-            + fir_coeffs[1] * stage_state
-            + fir_coeffs[2]
+            + fir_coeffs[1] * stage_state  # pyrefly: ignore[unsupported-operation]
+            + fir_coeffs[2]  # pyrefly: ignore[unsupported-operation]
             * (shift_left_one(stage_state) + shift_left_two(stage_state))
         )
     else:
@@ -1532,17 +1532,17 @@ def close_agc_loop(cfp: CarfacParams) -> CarfacParams:
   decim1 = cfp.agc_params.decimation[0]
 
   for ear in range(cfp.n_ears):
-    undamping = 1 - cfp.ears[ear].agc_state[0].agc_memory  # stage 1 result
+    undamping = 1 - cfp.ears[ear].agc_state[0].agc_memory  # stage 1 result  # pyrefly: ignore[unsupported-operation]
     undamping = undamping * cfp.ears[ear].car_coeffs.ohc_health
     # Update the target stage gain for the new damping:
     new_g = stage_g(cfp.ears[ear].car_coeffs, undamping)
     # set the deltas needed to get to the new damping:
-    cfp.ears[ear].car_state.dzb_memory = (
+    cfp.ears[ear].car_state.dzb_memory = (  # pyrefly: ignore[missing-attribute]
         cfp.ears[ear].car_coeffs.zr_coeffs * undamping
-        - cfp.ears[ear].car_state.zb_memory
+        - cfp.ears[ear].car_state.zb_memory  # pyrefly: ignore[missing-attribute]
     ) / decim1
-    cfp.ears[ear].car_state.dg_memory = (
-        new_g - cfp.ears[ear].car_state.g_memory
+    cfp.ears[ear].car_state.dg_memory = (  # pyrefly: ignore[missing-attribute]
+        new_g - cfp.ears[ear].car_state.g_memory  # pyrefly: ignore[missing-attribute]
     ) / decim1
   return cfp
 
@@ -1562,7 +1562,7 @@ def cross_couple(ears: List[CarfacCoeffs]) -> List[CarfacCoeffs]:
   n_stages = ears[0].agc_coeffs[0].n_agc_stages
   # now cross-ear mix the stages that updated (leading stages at phase 0):
   for stage in range(n_stages):
-    if ears[0].agc_state[stage].decim_phase > 0:
+    if ears[0].agc_state[stage].decim_phase > 0:  # pyrefly: ignore[unsupported-operation]
       return ears
     else:
       mix_coeff = ears[0].agc_coeffs[stage].agc_mix_coeffs
@@ -1571,12 +1571,12 @@ def cross_couple(ears: List[CarfacCoeffs]) -> List[CarfacCoeffs]:
       this_stage_sum = 0
       # sum up over the ears and get their mean:
       for ear in ears:
-        this_stage_sum += ear.agc_state[stage].agc_memory
+        this_stage_sum += ear.agc_state[stage].agc_memory  # pyrefly: ignore[unsupported-operation]
       this_stage_mean = this_stage_sum / len(ears)
       # now move them all toward the mean:
       for ear in ears:
-        stage_state = ear.agc_state[stage].agc_memory
-        ear.agc_state[stage].agc_memory = stage_state + mix_coeff * (
+        stage_state = ear.agc_state[stage].agc_memory  # pyrefly: ignore[unsupported-operation]
+        ear.agc_state[stage].agc_memory = stage_state + mix_coeff * (  # pyrefly: ignore[unsupported-operation]
             this_stage_mean - stage_state
         )
   return ears
@@ -1648,8 +1648,8 @@ def run_segment(
   if open_loop:
     # zero the deltas:
     for ear in range(cfp.n_ears):
-      cfp.ears[ear].car_state.dzb_memory *= 0
-      cfp.ears[ear].car_state.dg_memory *= 0
+      cfp.ears[ear].car_state.dzb_memory *= 0  # pyrefly: ignore[missing-attribute]
+      cfp.ears[ear].car_state.dg_memory *= 0  # pyrefly: ignore[missing-attribute]
 
   for k in range(n_samp):
     # at each time step, possibly handle multiple channels
@@ -1660,19 +1660,19 @@ def run_segment(
       [car_out, cfp.ears[ear].car_state] = car_step(
           input_waves[k, ear],
           cfp.ears[ear].car_coeffs,
-          cfp.ears[ear].car_state,
+          cfp.ears[ear].car_state,  # pyrefly: ignore[bad-argument-type]
           linear=linear_car,
       )
 
       # update IHC state & output on every time step, too
       [ihc_out, cfp.ears[ear].ihc_state, v_recep] = ihc_step(
-          car_out, cfp.ears[ear].ihc_coeffs, cfp.ears[ear].ihc_state
+          car_out, cfp.ears[ear].ihc_coeffs, cfp.ears[ear].ihc_state  # pyrefly: ignore[bad-argument-type]
       )
 
       if cfp.syn_params and cfp.syn_params.do_syn:
         # We don't use the firings yet.
         [ihc_syn_out, _, cfp.ears[ear].syn_state] = syn_step(
-            v_recep, cfp.ears[ear].syn_coeffs, cfp.ears[ear].syn_state
+            v_recep, cfp.ears[ear].syn_coeffs, cfp.ears[ear].syn_state  # pyrefly: ignore[bad-argument-type]
         )
         nap = ihc_syn_out
       else:
@@ -1680,7 +1680,7 @@ def run_segment(
 
       # run the AGC update step, decimating internally,
       [agc_updated, cfp.ears[ear].agc_state] = agc_step(
-          nap, cfp.ears[ear].agc_coeffs, cfp.ears[ear].agc_state
+          nap, cfp.ears[ear].agc_coeffs, cfp.ears[ear].agc_state  # pyrefly: ignore[bad-argument-type]
       )
 
       # save some output data:
@@ -1688,12 +1688,12 @@ def run_segment(
       if do_bm:
         bm[k, :, ear] = car_out
         state = cfp.ears[ear].car_state
-        seg_ohc[k, :, ear] = state.za_memory
-        seg_agc[k, :, ear] = state.zb_memory
+        seg_ohc[k, :, ear] = state.za_memory  # pyrefly: ignore[missing-attribute]
+        seg_agc[k, :, ear] = state.zb_memory  # pyrefly: ignore[missing-attribute]
 
     #  connect the feedback from agc_state to car_state when it updates;
     #  all ears together here due to mixing across them:
-    if agc_updated:
+    if agc_updated:  # pyrefly: ignore[unbound-name]
       if n_ears > 1:
         #  do multi-aural cross-coupling:
         cfp.ears = cross_couple(cfp.ears)

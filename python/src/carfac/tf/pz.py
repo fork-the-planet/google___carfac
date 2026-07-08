@@ -254,8 +254,8 @@ class PZCell(tf.keras.layers.Layer):
   def from_config(cls, config: Dict[str, float]):
     return cls(
         0,
-        np.zeros(shape=[config.pop('n_poles')]),
-        np.zeros(shape=[config.pop('n_zeros')]),
+        np.zeros(shape=[config.pop('n_poles')]),  # pyrefly: ignore[no-matching-overload]
+        np.zeros(shape=[config.pop('n_zeros')]),  # pyrefly: ignore[no-matching-overload]
     )
 
   def call(

@@ -67,7 +67,7 @@ class CARParams:
     Returns:
       The equivalent rectangular bandwidth at f.
     """
-    return (self.erb_break_freq + f) / self.erb_q
+    return (self.erb_break_freq + f) / self.erb_q  # pyrefly: ignore[unsupported-operation]
 
   def compute_zeta(self, zeta_at_half_erb_per_step: tf.Tensor) -> tf.Tensor:
     """Computes a reasonable zeta value for a given erb_per_step.
@@ -85,7 +85,7 @@ class CARParams:
       The corresponding zeta for the actually used erb_per_step.
     """
     default_erb_per_step = 0.5
-    max_small_signal_gain = (0.5 / zeta_at_half_erb_per_step) ** (
+    max_small_signal_gain = (0.5 / zeta_at_half_erb_per_step) ** (  # pyrefly: ignore[unsupported-operation]
         1 / default_erb_per_step
     )
     return 0.5 / (max_small_signal_gain**self.erb_per_step)
@@ -163,8 +163,8 @@ class AGCParams:
             [v],
             recurrence_expander(
                 v,
-                tf.ones((num - 1,), dtype=v.dtype) * scale,
-                tf.zeros((num - 1,), dtype=v.dtype),
+                tf.ones((num - 1,), dtype=v.dtype) * scale,  # pyrefly: ignore[unsupported-operation]
+                tf.zeros((num - 1,), dtype=v.dtype),  # pyrefly: ignore[unsupported-operation]
             ),
         ],
         axis=0,
@@ -755,7 +755,7 @@ def tensor_array_recurrence_expansion(
     new = tf.squeeze(
         tf.gather(f, axis=-1, indices=[idx]), axis=-1
     ) * prev + tf.squeeze(tf.gather(g, axis=-1, indices=[idx]), axis=-1)
-    return (new, f, g, res_ta.write(idx, new), idx + 1)
+    return (new, f, g, res_ta.write(idx, new), idx + 1)  # pyrefly: ignore[bad-return, unsupported-operation]
 
   *_, res_ta, _ = tf.while_loop(
       lambda a, b, c, d, idx: idx < f.shape[-1],
@@ -978,10 +978,10 @@ class CARFACCell(tf.keras.layers.Layer):
     self._open_loop = open_loop
     self._outputs = tuple(outputs)
 
-    curr_freq = car_params.max_pole_ratio * car_params.sample_rate_hz
+    curr_freq = car_params.max_pole_ratio * car_params.sample_rate_hz  # pyrefly: ignore[unsupported-operation]
     num_channels = 0
     while curr_freq > car_params.min_pole_hz:
-      curr_freq -= car_params.erb_per_step * car_params.erb_hz(curr_freq)
+      curr_freq -= car_params.erb_per_step * car_params.erb_hz(curr_freq)  # pyrefly: ignore[unsupported-operation]
       num_channels += 1
 
     self.car_params = self._copy_params_from(car_params)
@@ -1094,7 +1094,7 @@ class CARFACCell(tf.keras.layers.Layer):
         *ihc_state.convert().to_tensors(),
     ]
 
-    if self.agc_params.decimation.shape.as_list():
+    if self.agc_params.decimation.shape.as_list():  # pyrefly: ignore[missing-attribute]
       agc_coeffs = self._design_agc_coeffs()
 
       agc_state = _AGCState()
@@ -1102,7 +1102,7 @@ class CARFACCell(tf.keras.layers.Layer):
       agc_state.agc_memory = zeros
       agc_state.input_accum = zeros
       agc_state = _AGCState.concat(
-          [agc_state for _ in range(self.agc_params.decimation.shape[0])]
+          [agc_state for _ in range(self.agc_params.decimation.shape[0])]  # pyrefly: ignore[missing-attribute]
       )
 
       initial_state.extend(agc_coeffs.to_tensors())
@@ -1150,37 +1150,37 @@ class CARFACCell(tf.keras.layers.Layer):
     decim = tf.constant(1.0, dtype=self.dtype)
     delay = tf.constant(0.0, dtype=self.dtype)
     spread_sq = tf.constant(0.0, dtype=self.dtype)
-    for stage in range(self.agc_params.decimation.shape[0]):
+    for stage in range(self.agc_params.decimation.shape[0]):  # pyrefly: ignore[missing-attribute]
       agc_coeff = _AGCCoeffs()
       agc_coeffs.append(agc_coeff)
-      time_constants = self.agc_params.linear_growth(
+      time_constants = self.agc_params.linear_growth(  # pyrefly: ignore[missing-attribute]
           self._recurrence_expander,
-          self.agc_params.time_constants0,
-          self.agc_params.time_constants_mul,
-          self.agc_params.decimation.shape[0],
+          self.agc_params.time_constants0,  # pyrefly: ignore[missing-attribute]
+          self.agc_params.time_constants_mul,  # pyrefly: ignore[missing-attribute]
+          self.agc_params.decimation.shape[0],  # pyrefly: ignore[missing-attribute]
       )
-      agc1_scales = self.agc_params.linear_growth(
+      agc1_scales = self.agc_params.linear_growth(  # pyrefly: ignore[missing-attribute]
           self._recurrence_expander,
-          self.agc_params.agc1_scales0,
-          self.agc_params.agc1_scales_mul,
-          self.agc_params.decimation.shape[0],
+          self.agc_params.agc1_scales0,  # pyrefly: ignore[missing-attribute]
+          self.agc_params.agc1_scales_mul,  # pyrefly: ignore[missing-attribute]
+          self.agc_params.decimation.shape[0],  # pyrefly: ignore[missing-attribute]
       )
-      agc2_scales = self.agc_params.linear_growth(
+      agc2_scales = self.agc_params.linear_growth(  # pyrefly: ignore[missing-attribute]
           self._recurrence_expander,
-          self.agc_params.agc2_scales0,
-          self.agc_params.agc2_scales_mul,
-          self.agc_params.decimation.shape[0],
+          self.agc_params.agc2_scales0,  # pyrefly: ignore[missing-attribute]
+          self.agc_params.agc2_scales_mul,  # pyrefly: ignore[missing-attribute]
+          self.agc_params.decimation.shape[0],  # pyrefly: ignore[missing-attribute]
       )
-      agc_coeff.agc_stage_gain = self.agc_params.agc_stage_gain
-      agc_coeff.decimation = self.agc_params.decimation[stage]
+      agc_coeff.agc_stage_gain = self.agc_params.agc_stage_gain  # pyrefly: ignore[missing-attribute]
+      agc_coeff.decimation = self.agc_params.decimation[stage]  # pyrefly: ignore[missing-attribute]
       total_dc_gain = previous_stage_gain
       # Calculate the parameters for the current stage.
       tau = time_constants[stage]
       agc_coeff.decim = agc_coeff.decimation * decim
       agc_coeff.agc_epsilon = 1.0 - tf.math.exp(
-          (-1.0 * agc_coeff.decim) / (tau * self.car_params.sample_rate_hz)
+          (-1.0 * agc_coeff.decim) / (tau * self.car_params.sample_rate_hz)  # pyrefly: ignore[missing-attribute]
       )
-      n_times = tau * (self.car_params.sample_rate_hz / agc_coeff.decim)
+      n_times = tau * (self.car_params.sample_rate_hz / agc_coeff.decim)  # pyrefly: ignore[missing-attribute]
       delay = (agc2_scales[stage] - agc1_scales[stage]) / n_times
       spread_sq = (
           tf.math.square(agc1_scales[stage])
@@ -1279,11 +1279,11 @@ class CARFACCell(tf.keras.layers.Layer):
           ) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
             a = (
                 ((delay_variance + sq_mean_delay) * 2.0 / 5.0)
-                - (mean_delay * 2.0 / 3.0)
+                - (mean_delay * 2.0 / 3.0)  # pyrefly: ignore[unsupported-operation]
             ) / 2.0
             b = (
                 ((delay_variance + sq_mean_delay) * 2.0 / 5.0)
-                + (mean_delay * 2.0 / 3.0)
+                + (mean_delay * 2.0 / 3.0)  # pyrefly: ignore[unsupported-operation]
             ) / 2.0
             fir_left = a / 2.0
             fir_mid = 1 - a - b
@@ -1329,8 +1329,8 @@ class CARFACCell(tf.keras.layers.Layer):
       total_dc_gain += tf.math.pow(agc_coeff.agc_stage_gain, stage)
       agc_coeff.agc_mix_coeffs = tf.constant(0, dtype=self.dtype)
       if stage != 0:
-        agc_coeff.agc_mix_coeffs = self.agc_params.agc_mix_coeff / (
-            tau * (self.car_params.sample_rate_hz / agc_coeff.decim)
+        agc_coeff.agc_mix_coeffs = self.agc_params.agc_mix_coeff / (  # pyrefly: ignore[missing-attribute]
+            tau * (self.car_params.sample_rate_hz / agc_coeff.decim)  # pyrefly: ignore[missing-attribute]
         )
       agc_coeff.agc_gain = total_dc_gain
       agc_coeff.detect_scale = 1 / total_dc_gain
@@ -1354,8 +1354,8 @@ class CARFACCell(tf.keras.layers.Layer):
     ihc_coeffs.ac_coeff = (
         2
         * np.pi
-        * self.ihc_params.ac_corner_hz
-        / self.car_params.sample_rate_hz
+        * self.ihc_params.ac_corner_hz  # pyrefly: ignore[missing-attribute]
+        / self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
     )
 
     def build_capacitors() -> _IHCCoeffsET:
@@ -1363,21 +1363,21 @@ class CARFACCell(tf.keras.layers.Layer):
       conduct_at_0 = self._carfac_detect(tf.constant(0.0, dtype=self.dtype))
 
       def one_capacitor() -> _IHCCoeffsET:
-        ro = 1.0 / conduct_at_10
-        c = self.ihc_params.tau1_out / ro
-        ri = self.ihc_params.tau1_in / c
+        ro = 1.0 / conduct_at_10  # pyrefly: ignore[unsupported-operation]
+        c = self.ihc_params.tau1_out / ro  # pyrefly: ignore[missing-attribute]
+        ri = self.ihc_params.tau1_in / c  # pyrefly: ignore[missing-attribute]
         saturation_output = 1.0 / ((2.0 * ro) + ri)
-        r0 = 1.0 / conduct_at_0
+        r0 = 1.0 / conduct_at_0  # pyrefly: ignore[unsupported-operation]
         current = 1.0 / (ri + r0)
         ihc_coeffs.cap1_voltage = 1.0 - (current * ri)
         ihc_coeffs.lpf_coeff = 1.0 - tf.math.exp(
-            -1.0 / (self.ihc_params.tau_lpf * self.car_params.sample_rate_hz)
+            -1.0 / (self.ihc_params.tau_lpf * self.car_params.sample_rate_hz)  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.out1_rate = ro / (
-            self.ihc_params.tau1_out * self.car_params.sample_rate_hz
+            self.ihc_params.tau1_out * self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.in1_rate = 1.0 / (
-            self.ihc_params.tau1_in * self.car_params.sample_rate_hz
+            self.ihc_params.tau1_in * self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.output_gain = 1.0 / (saturation_output - current)
         ihc_coeffs.rest_output = current / (saturation_output - current)
@@ -1391,30 +1391,30 @@ class CARFACCell(tf.keras.layers.Layer):
         return ihc_coeffs.convert()
 
       def two_capacitors() -> _IHCCoeffsET:
-        ro = 1.0 / conduct_at_10
-        c2 = self.ihc_params.tau2_out / ro
-        r2 = self.ihc_params.tau2_in / c2
-        c1 = self.ihc_params.tau1_out / r2
-        r1 = self.ihc_params.tau1_in / c1
+        ro = 1.0 / conduct_at_10  # pyrefly: ignore[unsupported-operation]
+        c2 = self.ihc_params.tau2_out / ro  # pyrefly: ignore[missing-attribute]
+        r2 = self.ihc_params.tau2_in / c2  # pyrefly: ignore[missing-attribute]
+        c1 = self.ihc_params.tau1_out / r2  # pyrefly: ignore[missing-attribute]
+        r1 = self.ihc_params.tau1_in / c1  # pyrefly: ignore[missing-attribute]
         saturation_output = 1.0 / (2.0 * ro + r2 + r1)
-        r0 = 1.0 / conduct_at_0
+        r0 = 1.0 / conduct_at_0  # pyrefly: ignore[unsupported-operation]
         current = 1.0 / (r1 + r2 + r0)
         ihc_coeffs.cap1_voltage = 1.0 - (current * r1)
         ihc_coeffs.cap2_voltage = ihc_coeffs.cap1_voltage - (current * r2)
         ihc_coeffs.lpf_coeff = 1.0 - tf.math.exp(
-            -1.0 / (self.ihc_params.tau_lpf * self.car_params.sample_rate_hz)
+            -1.0 / (self.ihc_params.tau_lpf * self.car_params.sample_rate_hz)  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.out1_rate = 1.0 / (
-            self.ihc_params.tau1_out * self.car_params.sample_rate_hz
+            self.ihc_params.tau1_out * self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.in1_rate = 1.0 / (
-            self.ihc_params.tau1_in * self.car_params.sample_rate_hz
+            self.ihc_params.tau1_in * self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.out2_rate = ro / (
-            self.ihc_params.tau2_out * self.car_params.sample_rate_hz
+            self.ihc_params.tau2_out * self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.in2_rate = 1.0 / (
-            self.ihc_params.tau2_in * self.car_params.sample_rate_hz
+            self.ihc_params.tau2_in * self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
         )
         ihc_coeffs.output_gain = 1.0 / (saturation_output - current)
         ihc_coeffs.rest_output = current / (saturation_output - current)
@@ -1423,17 +1423,17 @@ class CARFACCell(tf.keras.layers.Layer):
         return ihc_coeffs.convert()
 
       return tf.cond(
-          self.ihc_params.one_capacitor != 0.0, one_capacitor, two_capacitors
+          self.ihc_params.one_capacitor != 0.0, one_capacitor, two_capacitors  # pyrefly: ignore[missing-attribute]
       )
 
     return tf.cond(
-        self.ihc_params.just_half_wave_rectify != 0.0,
+        self.ihc_params.just_half_wave_rectify != 0.0,  # pyrefly: ignore[missing-attribute]
         ihc_coeffs.convert,
         build_capacitors,
     )
 
   def _design_car_coeffs(self) -> _CARCoeffsET:
-    max_hz = self.car_params.max_pole_ratio * self.car_params.sample_rate_hz
+    max_hz = self.car_params.max_pole_ratio * self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
     ones = tf.ones(shape=(self.output_size[1],), dtype=self.dtype)
     pole_freqs = tf.concat(
         [
@@ -1441,12 +1441,12 @@ class CARFACCell(tf.keras.layers.Layer):
             self._recurrence_expander(
                 max_hz,
                 ones[1:]
-                * (1 - self.car_params.erb_per_step / self.car_params.erb_q),
+                * (1 - self.car_params.erb_per_step / self.car_params.erb_q),  # pyrefly: ignore[missing-attribute]
                 ones[1:]
                 * (
-                    -self.car_params.erb_per_step
-                    * self.car_params.erb_break_freq
-                    / self.car_params.erb_q
+                    -self.car_params.erb_per_step  # pyrefly: ignore[missing-attribute]
+                    * self.car_params.erb_break_freq  # pyrefly: ignore[missing-attribute]
+                    / self.car_params.erb_q  # pyrefly: ignore[missing-attribute]
                 ),
             ),
         ],
@@ -1454,32 +1454,32 @@ class CARFACCell(tf.keras.layers.Layer):
     )
 
     car_coeffs = _CARCoeffs()
-    theta = pole_freqs * 2 * np.pi / self.car_params.sample_rate_hz
-    car_coeffs.velocity_scale = ones * self.car_params.velocity_scale
-    car_coeffs.v_offset = ones * self.car_params.v_offset
+    theta = pole_freqs * 2 * np.pi / self.car_params.sample_rate_hz  # pyrefly: ignore[missing-attribute]
+    car_coeffs.velocity_scale = ones * self.car_params.velocity_scale  # pyrefly: ignore[missing-attribute]
+    car_coeffs.v_offset = ones * self.car_params.v_offset  # pyrefly: ignore[missing-attribute]
     car_coeffs.a0_coeffs = tf.math.cos(theta)
     car_coeffs.c0_coeffs = tf.math.sin(theta)
-    car_coeffs.min_zeta = ones * self.car_params.compute_zeta(
-        self.car_params.min_zeta_at_half_erb_per_step
+    car_coeffs.min_zeta = ones * self.car_params.compute_zeta(  # pyrefly: ignore[missing-attribute]
+        self.car_params.min_zeta_at_half_erb_per_step  # pyrefly: ignore[missing-attribute]
     )
-    car_coeffs.max_zeta = ones * self.car_params.compute_zeta(
-        self.car_params.max_zeta_at_half_erb_per_step
+    car_coeffs.max_zeta = ones * self.car_params.compute_zeta(  # pyrefly: ignore[missing-attribute]
+        self.car_params.max_zeta_at_half_erb_per_step  # pyrefly: ignore[missing-attribute]
     )
     x = theta / np.pi
     car_coeffs.zr_coeffs = np.pi * (
-        x - (self.car_params.high_f_damping_compression * tf.math.pow(x, 3))
+        x - (self.car_params.high_f_damping_compression * tf.math.pow(x, 3))  # pyrefly: ignore[missing-attribute]
     )
     car_coeffs.r1_coeffs = 1.0 - (car_coeffs.zr_coeffs * car_coeffs.max_zeta)
     min_zetas = car_coeffs.min_zeta + (
         0.25
         * (
-            (self.car_params.erb_hz(pole_freqs) / pole_freqs)
+            (self.car_params.erb_hz(pole_freqs) / pole_freqs)  # pyrefly: ignore[missing-attribute]
             - car_coeffs.min_zeta
         )
     )
     car_coeffs.zr_coeffs *= car_coeffs.max_zeta - min_zetas
     car_coeffs.h_coeffs = car_coeffs.c0_coeffs * (
-        tf.math.square(self.car_params.zero_ratio) - 1.0
+        tf.math.square(self.car_params.zero_ratio) - 1.0  # pyrefly: ignore[missing-attribute]
     )
     r = car_coeffs.r1_coeffs + car_coeffs.zr_coeffs
     car_coeffs.g0_coeffs = (
@@ -1500,7 +1500,7 @@ class CARFACCell(tf.keras.layers.Layer):
   ) -> _IHCStateET:
     car_out = car_state_et.zy_memory
     ihc_state = ihc_state_et.convert()
-    ac_diff = car_out - ihc_state.ac_coupler
+    ac_diff = car_out - ihc_state.ac_coupler  # pyrefly: ignore[unsupported-operation]
     ihc_state.ac_coupler += ihc_coeffs.ac_coeff * ac_diff
 
     def just_half_wave_rectify(
@@ -1515,24 +1515,24 @@ class CARFACCell(tf.keras.layers.Layer):
 
       def one_capacitor(ihc_state_et: _IHCStateET) -> _IHCStateET:
         ihc_state = ihc_state_et.convert()
-        ihc_state.ihc_out = conductance * ihc_state.cap1_voltage
+        ihc_state.ihc_out = conductance * ihc_state.cap1_voltage  # pyrefly: ignore[unsupported-operation]
         ihc_state.cap1_voltage = (
             ihc_state.cap1_voltage
             - (ihc_state.ihc_out * ihc_coeffs.out1_rate)
-            + ((1.0 - ihc_state.cap1_voltage) * ihc_coeffs.in1_rate)
+            + ((1.0 - ihc_state.cap1_voltage) * ihc_coeffs.in1_rate)  # pyrefly: ignore[unsupported-operation]
         )
         return ihc_state.convert()
 
       def two_capacitors(ihc_state_et: _IHCStateET) -> _IHCStateET:
         ihc_state = ihc_state_et.convert()
-        ihc_state.ihc_out = conductance * ihc_state.cap2_voltage
+        ihc_state.ihc_out = conductance * ihc_state.cap2_voltage  # pyrefly: ignore[unsupported-operation]
         ihc_state.cap1_voltage = (
             ihc_state.cap1_voltage
             - (
-                (ihc_state.cap1_voltage - ihc_state.cap2_voltage)
+                (ihc_state.cap1_voltage - ihc_state.cap2_voltage)  # pyrefly: ignore[unsupported-operation]
                 * ihc_coeffs.out1_rate
             )
-            + ((1.0 - ihc_state.cap1_voltage) * ihc_coeffs.in1_rate)
+            + ((1.0 - ihc_state.cap1_voltage) * ihc_coeffs.in1_rate)  # pyrefly: ignore[unsupported-operation]
         )
         ihc_state.cap2_voltage = (
             ihc_state.cap2_voltage
@@ -1545,7 +1545,7 @@ class CARFACCell(tf.keras.layers.Layer):
         return ihc_state.convert()
 
       ihc_state_et = tf.cond(
-          self.ihc_params.one_capacitor != 0.0,
+          self.ihc_params.one_capacitor != 0.0,  # pyrefly: ignore[missing-attribute]
           lambda: one_capacitor(ihc_state_et),
           lambda: two_capacitors(ihc_state_et),
       )
@@ -1561,7 +1561,7 @@ class CARFACCell(tf.keras.layers.Layer):
       return ihc_state.convert()
 
     return tf.cond(
-        self.ihc_params.just_half_wave_rectify != 0.0,
+        self.ihc_params.just_half_wave_rectify != 0.0,  # pyrefly: ignore[missing-attribute]
         lambda: just_half_wave_rectify(ihc_state.convert(), ac_diff),
         lambda: lpf_step(ihc_state.convert(), ac_diff),
     )
@@ -1572,7 +1572,7 @@ class CARFACCell(tf.keras.layers.Layer):
       agc_state_et: _AGCStateET,
       ihc_state_et: _IHCStateET,
   ) -> tuple[_AGCStateET, tf.Tensor]:
-    if self.agc_params.decimation.shape[0] == 0:
+    if self.agc_params.decimation.shape[0] == 0:  # pyrefly: ignore[missing-attribute]
       return (agc_state_et, tf.constant(False))
 
     # First copy the ihc_out to the input accumulator of the first stage,
@@ -1587,8 +1587,8 @@ class CARFACCell(tf.keras.layers.Layer):
     ) -> tuple[_AGCStateET, tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
       agc_states = agc_state_et.convert()
       agc_state = agc_states[stage]
-      agc_state.input_accum += agc_in_out
-      agc_state.decim_phase += 1
+      agc_state.input_accum += agc_in_out  # pyrefly: ignore[unsupported-operation]
+      agc_state.decim_phase += 1  # pyrefly: ignore[bad-assignment, unsupported-operation]
       agc_states.update(stage, agc_state)
 
       def decimate(
@@ -1600,14 +1600,14 @@ class CARFACCell(tf.keras.layers.Layer):
         agc_states.update(stage, agc_state)
         return (
             agc_states.convert(),  # pytype: disable=bad-return-type  # dynamic-method-lookup
-            stage >= self.agc_params.decimation.shape[0] - 1,
+            stage >= self.agc_params.decimation.shape[0] - 1,  # pyrefly: ignore[missing-attribute]
             stage,
-            agc_state.input_accum / agc_coeffs[stage].decimation,
+            agc_state.input_accum / agc_coeffs[stage].decimation,  # pyrefly: ignore[unsupported-operation]
         )
 
       (agc_state_et, done, last_decimated_stage, agc_in_out) = tf.cond(
-          agc_state.decim_phase[0, 0, 0]
-          >= tf.cast(agc_coeffs[stage].decimation, agc_state.decim_phase.dtype),
+          agc_state.decim_phase[0, 0, 0]  # pyrefly: ignore[bad-index]
+          >= tf.cast(agc_coeffs[stage].decimation, agc_state.decim_phase.dtype),  # pyrefly: ignore[missing-attribute]
           lambda: decimate(agc_states.convert(), stage),
           lambda: (
               agc_states.convert(),
@@ -1616,12 +1616,12 @@ class CARFACCell(tf.keras.layers.Layer):
               agc_in_out,
           ),
       )
-      stage = tf.cond(done, lambda: stage, lambda: stage + 1)
+      stage = tf.cond(done, lambda: stage, lambda: stage + 1)  # pyrefly: ignore[unsupported-operation]
       return (agc_state_et, stage, last_decimated_stage, done, agc_in_out)
 
     agc_in_out = (
-        ihc_state_et.ihc_out
-        * agc_coeffs[self.agc_params.decimation.shape[0] - 1].detect_scale
+        ihc_state_et.ihc_out  # pyrefly: ignore[unsupported-operation]
+        * agc_coeffs[self.agc_params.decimation.shape[0] - 1].detect_scale  # pyrefly: ignore[missing-attribute]
     )
     (agc_state_et, _, last_decimated_stage, _, _) = tf.while_loop(
         lambda _a, _b, c, done, d: tf.logical_not(done),
@@ -1653,7 +1653,7 @@ class CARFACCell(tf.keras.layers.Layer):
     ) -> tuple[_AGCStateET, tf.Tensor, tf.Tensor]:
       agc_states = agc_state_et.convert()
       agc_state = agc_states[stage]
-      decim_accum = agc_state.input_accum / agc_coeffs[stage].decimation
+      decim_accum = agc_state.input_accum / agc_coeffs[stage].decimation  # pyrefly: ignore[unsupported-operation]
       agc_states.update(stage, agc_state)
 
       def add_next(
@@ -1661,8 +1661,8 @@ class CARFACCell(tf.keras.layers.Layer):
       ) -> tf.Tensor:
         return (
             decim_accum
-            + agc_coeffs[stage].agc_stage_gain
-            * agc_states_et[stage + 1].agc_memory
+            + agc_coeffs[stage].agc_stage_gain  # pyrefly: ignore[unsupported-operation]
+            * agc_states_et[stage + 1].agc_memory  # pyrefly: ignore[bad-index, unsupported-operation]
         )
 
       decim_accum = tf.cond(
@@ -1678,10 +1678,10 @@ class CARFACCell(tf.keras.layers.Layer):
           agc_coeffs, stage, agc_state.agc_memory
       )
       agc_states.update(stage, agc_state)
-      return (
+      return (  # pyrefly: ignore[bad-return]
           agc_states.convert(),  # pytype: disable=bad-return-type  # dynamic-method-lookup
-          stage - 1,
-          stage < 1,
+          stage - 1,  # pyrefly: ignore[unsupported-operation]
+          stage < 1,  # pyrefly: ignore[unsupported-operation]
       )
 
     (agc_state_et, _, _) = tf.while_loop(
@@ -1724,7 +1724,7 @@ class CARFACCell(tf.keras.layers.Layer):
       )
 
     return tf.cond(
-        agc_coeffs[stage].agc_spatial_iterations >= 0,
+        agc_coeffs[stage].agc_spatial_iterations >= 0,  # pyrefly: ignore[unsupported-operation]
         lambda: spatial_smooth(stage, agc_memory),
         lambda: self._agc_smooth_double_exponential(
             agc_coeffs[stage].agc_pole_z1,
@@ -1740,13 +1740,13 @@ class CARFACCell(tf.keras.layers.Layer):
     state1 = self._recurrence_expander(
         tf.zeros_like(agc_memory)[:, :, 0],
         ones[:, :, -11:] * pole_z1,
-        (1 - pole_z1) * agc_memory[:, :, -11:],
+        (1 - pole_z1) * agc_memory[:, :, -11:],  # pyrefly: ignore[unsupported-operation]
     )[:, :, -1]
     state2 = self._recurrence_expander(
-        state1, ones * pole_z2, (1 - pole_z2) * agc_memory[:, :, ::-1]
+        state1, ones * pole_z2, (1 - pole_z2) * agc_memory[:, :, ::-1]  # pyrefly: ignore[unsupported-operation]
     )[:, :, -1]
     return self._recurrence_expander(
-        state2, ones * pole_z1, (1 - pole_z1) * agc_memory
+        state2, ones * pole_z1, (1 - pole_z1) * agc_memory  # pyrefly: ignore[bad-argument-type, unsupported-operation]
     )
 
   def _cross_couple(
@@ -1779,13 +1779,13 @@ class CARFACCell(tf.keras.layers.Layer):
         return agc_states.convert()
 
       agc_state_et = tf.cond(
-          agc_coeffs[stage].agc_mix_coeffs > 0,
+          agc_coeffs[stage].agc_mix_coeffs > 0,  # pyrefly: ignore[unsupported-operation]
           lambda: mix_channels(agc_state_et, stage),
           lambda: agc_state_et,
       )
-      stage += 1
+      stage += 1  # pyrefly: ignore[bad-assignment, unsupported-operation]
       done = tf.cond(
-          stage >= self.agc_params.decimation.shape[0],
+          stage >= self.agc_params.decimation.shape[0],  # pyrefly: ignore[missing-attribute]
           lambda: tf.constant(True),
           lambda: agc_state_et.decim_phase[0, 0, 0, stage] > 0,
       )
@@ -1812,18 +1812,18 @@ class CARFACCell(tf.keras.layers.Layer):
       car_state.dg_memory = tf.zeros_like(car_state.dg_memory)
     else:
       # Scale factor to get the deltas to update in this many steps.
-      scaling = 1.0 / agc_coeffs[tf.constant(0, tf.int32)].decimation
-      undamping = 1.0 - agc_state_et[tf.constant(0, tf.int32)].agc_memory
+      scaling = 1.0 / agc_coeffs[tf.constant(0, tf.int32)].decimation  # pyrefly: ignore[unsupported-operation]
+      undamping = 1.0 - agc_state_et[tf.constant(0, tf.int32)].agc_memory  # pyrefly: ignore[unsupported-operation]
       # This sets the delta for the damping zb.
-      car_state.dzb_memory = (
-          car_coeffs.zr_coeffs * undamping - car_state.zb_memory
+      car_state.dzb_memory = (  # pyrefly: ignore[bad-assignment]
+          car_coeffs.zr_coeffs * undamping - car_state.zb_memory  # pyrefly: ignore[unsupported-operation]
       ) * scaling
       # Find new stage gains to go with new dampings.
-      r = car_coeffs.r1_coeffs + car_coeffs.zr_coeffs * undamping
-      g_values = (1 - 2 * r * car_coeffs.a0_coeffs + tf.math.square(r)) / (
+      r = car_coeffs.r1_coeffs + car_coeffs.zr_coeffs * undamping  # pyrefly: ignore[unsupported-operation]
+      g_values = (1 - 2 * r * car_coeffs.a0_coeffs + tf.math.square(r)) / (  # pyrefly: ignore[unsupported-operation]
           1
-          - 2 * r * car_coeffs.a0_coeffs
-          + car_coeffs.h_coeffs * r * car_coeffs.c0_coeffs
+          - 2 * r * car_coeffs.a0_coeffs  # pyrefly: ignore[unsupported-operation]
+          + car_coeffs.h_coeffs * r * car_coeffs.c0_coeffs  # pyrefly: ignore[unsupported-operation]
           + tf.math.square(r)
       )
       # This updates the target stage gain.
@@ -1851,24 +1851,24 @@ class CARFACCell(tf.keras.layers.Layer):
     car_coeffs = _CARCoeffsET.from_tensors(
         states_at_t[: len(dataclasses.fields(_CARCoeffs))]
     )
-    states_at_t = states_at_t[len(dataclasses.fields(_CARCoeffs)) :]
+    states_at_t = states_at_t[len(dataclasses.fields(_CARCoeffs)) :]  # pyrefly: ignore[bad-assignment]
     car_state = _CARStateET.from_tensors(
         states_at_t[: len(dataclasses.fields(_CARState))]
     )
-    states_at_t = states_at_t[len(dataclasses.fields(_CARState)) :]
+    states_at_t = states_at_t[len(dataclasses.fields(_CARState)) :]  # pyrefly: ignore[bad-assignment]
     ihc_coeffs = _IHCCoeffsET.from_tensors(
         states_at_t[: len(dataclasses.fields(_IHCCoeffs))]
     )
-    states_at_t = states_at_t[len(dataclasses.fields(_IHCCoeffs)) :]
+    states_at_t = states_at_t[len(dataclasses.fields(_IHCCoeffs)) :]  # pyrefly: ignore[bad-assignment]
     ihc_state = _IHCStateET.from_tensors(
         states_at_t[: len(dataclasses.fields(_IHCState))]
     )
-    states_at_t = states_at_t[len(dataclasses.fields(_IHCState)) :]
-    if self.agc_params.decimation.shape.as_list():
+    states_at_t = states_at_t[len(dataclasses.fields(_IHCState)) :]  # pyrefly: ignore[bad-assignment]
+    if self.agc_params.decimation.shape.as_list():  # pyrefly: ignore[missing-attribute]
       agc_coeffs = _AGCCoeffsET.from_tensors(
           states_at_t[: len(dataclasses.fields(_AGCCoeffs))]
       )
-      states_at_t = states_at_t[len(dataclasses.fields(_AGCCoeffs)) :]
+      states_at_t = states_at_t[len(dataclasses.fields(_AGCCoeffs)) :]  # pyrefly: ignore[bad-assignment]
       agc_state = _AGCStateET.from_tensors(
           states_at_t[: len(dataclasses.fields(_AGCState))]
       )
@@ -1880,13 +1880,13 @@ class CARFACCell(tf.keras.layers.Layer):
     if (
         not self._open_loop
         and not self._linear
-        and self.agc_params.decimation.shape.as_list()
+        and self.agc_params.decimation.shape.as_list()  # pyrefly: ignore[missing-attribute]
     ):
       # `agc_coeffs` and `agc_state` are defined iff
       # `agc_params.decimation.shape.as_list()`, which is true in this branch.
       agc_state, agc_memory_updated = self._agc_step(
-          agc_coeffs,
-          agc_state,  # pylint: disable=used-before-assignment
+          agc_coeffs,  # pyrefly: ignore[unbound-name]
+          agc_state,  # pylint: disable=used-before-assignment  # pyrefly: ignore[unbound-name]
           ihc_state,
       )
 
@@ -1912,8 +1912,8 @@ class CARFACCell(tf.keras.layers.Layer):
         *ihc_coeffs.to_tensors(),
         *ihc_state.to_tensors(),
     ]
-    if self.agc_params.decimation.shape.as_list():
-      next_state.extend(agc_coeffs.to_tensors() + agc_state.to_tensors())
+    if self.agc_params.decimation.shape.as_list():  # pyrefly: ignore[missing-attribute]
+      next_state.extend(agc_coeffs.to_tensors() + agc_state.to_tensors())  # pyrefly: ignore[unbound-name, unsupported-operation]
 
     outputs: list[tf.Tensor] = []
     for output in self._outputs:
@@ -1926,7 +1926,7 @@ class CARFACCell(tf.keras.layers.Layer):
       elif output == CARFACOutput.NAP:
         outputs.append(ihc_state.ihc_out)
 
-    return (tf.stack(outputs, axis=3), tuple(next_state))
+    return (tf.stack(outputs, axis=3), tuple(next_state))  # pyrefly: ignore[bad-return]
 
   def _car_step(
       self,
@@ -1937,14 +1937,14 @@ class CARFACCell(tf.keras.layers.Layer):
     car_state = car_state_et.convert()
     # Many comments in this function from here copied from cpp/ear.cc.
     # Interpolates g.
-    car_state.g_memory += car_state.dg_memory
+    car_state.g_memory += car_state.dg_memory  # pyrefly: ignore[unsupported-operation]
     # Calculates the AGC interpolation state.
-    car_state.zb_memory += car_state.dzb_memory
+    car_state.zb_memory += car_state.dzb_memory  # pyrefly: ignore[unsupported-operation]
     # This updates the nonlinear function of 'velocity' along with zA, which is
     # a delay of z2.
     r = car_coeffs.r1_coeffs
     if self._linear:
-      r += car_coeffs.zr_coeffs
+      r += car_coeffs.zr_coeffs  # pyrefly: ignore[unsupported-operation]
     else:
       r += (
           # This product is the "undamping" delta r.
@@ -1961,7 +1961,7 @@ class CARFACCell(tf.keras.layers.Layer):
                   + tf.math.square(
                       (
                           car_coeffs.velocity_scale
-                          * (car_state.z2_memory - car_state.za_memory)
+                          * (car_state.z2_memory - car_state.za_memory)  # pyrefly: ignore[unsupported-operation]
                       )  # velocities
                       + car_coeffs.v_offset
                   )
@@ -2021,15 +2021,15 @@ def plot_car_channels(
       linear=True,
       outputs=(CARFACOutput.BM,),
       open_loop=True,
-      car_params=cell.car_params,
-      ihc_params=cell.ihc_params,
-      agc_params=cell.agc_params,
+      car_params=cell.car_params,  # pyrefly: ignore[bad-argument-type]
+      ihc_params=cell.ihc_params,  # pyrefly: ignore[bad-argument-type]
+      agc_params=cell.agc_params,  # pyrefly: ignore[bad-argument-type]
   )
   layer = tf.keras.layers.RNN(linear_cell, return_sequences=True)
   layer.call = tf.function(layer.call)
   impulse: np.ndarray = np.zeros([1, window_size, 1, 1], dtype=cell.dtype)
   impulse[:, 0, :, :] = 1
-  got = layer(impulse)
+  got = layer(impulse)  # pyrefly: ignore[not-callable]
   transposed_got = tf.transpose(got[0, :, 0, :, 0], [1, 0])
   return pz.plot_z(
       np.fft.fft(transposed_got),

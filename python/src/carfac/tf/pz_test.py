@@ -53,7 +53,7 @@ class CoeffTest(unittest.TestCase):
     inputs: tf.Tensor = tf.constant([1, 2, 3, 4, 5], dtype=tf.complex128)
     outputs: tf.Tensor = pz.coeffs_from_zeros(inputs)
     expected_outputs = [1, -15, 85, -225, 274, -120]
-    np.testing.assert_array_almost_equal(outputs, expected_outputs)
+    np.testing.assert_array_almost_equal(outputs, expected_outputs)  # pyrefly: ignore[bad-argument-type]
 
 
 class PZTest(unittest.TestCase):
@@ -102,7 +102,7 @@ class PZTest(unittest.TestCase):
       pz_layer = tf.keras.layers.RNN(
           pz_cell, return_sequences=True, dtype=dtype
       )
-      self.assert_impulse_response(pz_layer, dtype, gain, poles, zeros)
+      self.assert_impulse_response(pz_layer, dtype, gain, poles, zeros)  # pyrefly: ignore[bad-argument-type]
 
   def testTFFunction(self):
     for dtype in [tf.float32, tf.float64]:
@@ -119,7 +119,7 @@ class PZTest(unittest.TestCase):
       @tf.function
       def compute(inputs):
         # pylint: disable=cell-var-from-loop
-        return pz_layer(inputs)
+        return pz_layer(inputs)  # pyrefly: ignore[not-callable]
 
       self.assert_impulse_response(compute, dtype, gain, poles, zeros)
 

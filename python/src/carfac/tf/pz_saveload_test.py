@@ -58,7 +58,7 @@ class PZTest(unittest.TestCase):
           savefile, custom_objects={'PZCell': pz.PZCell}
       )
       np.testing.assert_array_almost_equal(
-          model(impulse), loaded_model(impulse)
+          model(impulse), loaded_model(impulse)  # pyrefly: ignore[not-callable]
       )
 
 

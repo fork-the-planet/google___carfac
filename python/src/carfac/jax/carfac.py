@@ -1300,7 +1300,7 @@ def design_and_init_carfac(
         car=car_weights,
         agc=agc_weights,
         ihc=ihc_weights,
-        syn=syn_weights,
+        syn=syn_weights,  # pyrefly: ignore[bad-argument-type]
     )
     weights.ears.append(ear_weights)
 
@@ -1308,7 +1308,7 @@ def design_and_init_carfac(
         car=car_state,
         agc=agc_state,
         ihc=ihc_state,
-        syn=syn_state,
+        syn=syn_state,  # pyrefly: ignore[bad-argument-type]
     )
     state.ears.append(ear_state)
 
@@ -1773,9 +1773,9 @@ def spatial_smooth_jit(
       0,
       n_iterations,
       lambda _, stage_state: (  # pylint: disable=g-long-lambda
-          fir_coeffs[0] * _shift_right_one(stage_state)
-          + fir_coeffs[1] * stage_state
-          + fir_coeffs[2] * _shift_left_one(stage_state)
+          fir_coeffs[0] * _shift_right_one(stage_state)  # pyrefly: ignore[unsupported-operation]
+          + fir_coeffs[1] * stage_state  # pyrefly: ignore[unsupported-operation]
+          + fir_coeffs[2] * _shift_left_one(stage_state)  # pyrefly: ignore[unsupported-operation]
       ),
       stage_state,
   )
@@ -2202,4 +2202,4 @@ def run_segment_jit_in_chunks_notraceable(
   bm_out = np.concatenate(bm_out, 0)
   ohc_out = np.concatenate(ohc_out, 0)
   agc_out = np.concatenate(agc_out, 0)
-  return naps_out, naps_fibers_out, state, bm_out, ohc_out, agc_out
+  return naps_out, naps_fibers_out, state, bm_out, ohc_out, agc_out  # pyrefly: ignore[bad-return]
