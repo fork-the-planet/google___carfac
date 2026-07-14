@@ -13,7 +13,7 @@ import dataclasses
 import functools
 import math
 import numbers
-from typing import ClassVar, List, Optional, Tuple
+from typing import ClassVar, List, NamedTuple, Optional, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -1973,15 +1973,24 @@ def run_sample(
   )
 
 
+class CarfacOutput(NamedTuple):
+  """Output of the CARFAC model."""
+
+  naps: jnp.ndarray
+  naps_fibers: jnp.ndarray
+  state: CarfacState
+  bm: jnp.ndarray
+  seg_ohc: jnp.ndarray
+  seg_agc: jnp.ndarray
+
+
 def run_segment(
     input_waves: jnp.ndarray,
     hypers: CarfacHypers,
     weights: CarfacWeights,
     state: CarfacState,
     open_loop: bool = False,
-) -> Tuple[
-    jnp.ndarray, jnp.ndarray, CarfacState, jnp.ndarray, jnp.ndarray, jnp.ndarray
-]:
+) -> CarfacOutput:
   """This function runs the entire CARFAC model.
 
   That is, filters a 1 or more channel
@@ -2038,7 +2047,7 @@ def run_segment(
       input_waves,
   )
 
-  return (
+  return CarfacOutput(
       naps,
       naps_fibers,
       state,
@@ -2061,9 +2070,7 @@ def run_segment_jit(
     weights: CarfacWeights,
     state: CarfacState,
     open_loop: bool = False,
-) -> Tuple[
-    jnp.ndarray, jnp.ndarray, CarfacState, jnp.ndarray, jnp.ndarray, jnp.ndarray
-]:
+) -> CarfacOutput:
   """A JITted version of run_segment for convenience.
 
   Care should be taken with the hyper parameters in hypers. If the hypers object
@@ -2122,9 +2129,7 @@ def run_segment_jit_in_chunks_notraceable(
     state: CarfacState,
     open_loop: bool = False,
     segment_chunk_length: int = 32 * 48000,
-) -> tuple[
-    jnp.ndarray, jnp.ndarray, CarfacState, jnp.ndarray, jnp.ndarray, jnp.ndarray
-]:
+) -> CarfacOutput:
   """Runs the jitted segment runner in segment groups.
 
   Running CARFAC on an audio segment this way is most useful when running
@@ -2202,4 +2207,11 @@ def run_segment_jit_in_chunks_notraceable(
   bm_out = np.concatenate(bm_out, 0)
   ohc_out = np.concatenate(ohc_out, 0)
   agc_out = np.concatenate(agc_out, 0)
-  return naps_out, naps_fibers_out, state, bm_out, ohc_out, agc_out  # pyrefly: ignore[bad-return]
+  return CarfacOutput(
+      naps=naps_out,  # pyrefly: ignore[bad-argument-type]
+      naps_fibers=naps_fibers_out,  # pyrefly: ignore[bad-argument-type]
+      state=state,
+      bm=bm_out,  # pyrefly: ignore[bad-argument-type]
+      seg_ohc=ohc_out,  # pyrefly: ignore[bad-argument-type]
+      seg_agc=agc_out,  # pyrefly: ignore[bad-argument-type]
+  )
